@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.1
+
+- The selection bar is tidied: count and All shown / None on the left, the four actions in one even row, Done at the end. Narrow windows wrap by group instead of leaving a lone button, and buttons without a selection look plainly switched off.
+- After a bulk run (also "set up Steam profiles") a window lists every account: done, failed with the reason, or not done. It stays until closed and has an Open log button. While a run is going the bar names the account it is on. The Log has the start and the result of the run.
+- Feedback pass over the whole app:
+  - "Read Steam profile again" says when Steam did not answer instead of reporting success; reading all profiles reports the result at the end.
+  - A profile Steam did not answer for shows as "N Steam profiles not read" in the overview (click to try again).
+  - "Check now" for updates says when GitHub cannot be reached instead of "You have the latest version".
+  - A damaged file found at start is shown right away, not only in the Log.
+  - Opening a folder or release page, saving export fields and similar actions now show the reason when they fail.
+
 ## 0.11.0
 
 - New Select button on the Accounts page: tick accounts (or "All shown"), then Make private, Make public, Random name or Random picture for all of them. A window lists the accounts first. Accounts without a Steam profile are left out of the actions that need one.

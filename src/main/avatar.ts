@@ -217,6 +217,11 @@ export class AvatarCache {
 		this.checkedAt.clear();
 	}
 
+	/** Steam did not answer the last time this profile was asked for (and it is not asked again just yet). */
+	unreadable(steamId: string): boolean {
+		return Date.now() - (this.failed.get(steamId) ?? 0) < RETRY_MS;
+	}
+
 	/** True when Steam says this account has no Community profile yet. */
 	isUnset(steamId: string): boolean {
 		return this.profiles[steamId]?.unset === true;
@@ -272,10 +277,20 @@ export class AvatarCache {
 		step(0);
 	}
 
-	/** Reads this profile right now, ahead of the queue. */
-	async readNow(steamId: string): Promise<void> {
+	/** Reads this profile right now, ahead of the queue. Returns why it failed, or nothing. */
+	async readNow(steamId: string): Promise<string | undefined> {
 		this.forget(steamId);
-		await this.download(steamId);
+		return this.download(steamId);
+	}
+
+	/** Reads these profiles one after the other with a pause, and says which ones Steam did not answer for. */
+	async readAll(ids: string[]): Promise<{ done: number; failed: string[] }> {
+		const failed: string[] = [];
+		for (const [i, id] of ids.entries()) {
+			if (await this.readNow(id)) failed.push(id);
+			if (i < ids.length - 1) await new Promise((r) => setTimeout(r, 1500));
+		}
+		return { done: ids.length - failed.length, failed };
 	}
 
 	/** Public, friends only or private, once Steam has said. */
@@ -373,7 +388,8 @@ export class AvatarCache {
 			.then(() => new Promise<void>((r) => setTimeout(r, 1500)));
 	}
 
-	private async download(steamId: string): Promise<void> {
+	/** Reads the profile; returns why it failed in words, or nothing when it worked. */
+	private async download(steamId: string): Promise<string | undefined> {
 		const want = this.wants.get(steamId) ?? { image: true, bans: true };
 		try {
 			const xml = await fetch(`${this.profileBase}/${steamId}/?xml=1&nocache=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(10_000) }).then((r) => r.text());
@@ -436,12 +452,18 @@ export class AvatarCache {
 			if (exp && exp.name === undefined && exp.privacy === undefined && exp.staleUrl === undefined) this.expected.delete(steamId);
 			this.save();
 			if (changed) this.onUpdate();
+			return undefined;
 		} catch (err) {
 			// Whatever was read before the failure is kept.
 			this.save();
 			if (this.profiles[steamId]?.name !== undefined) this.onUpdate();
 			log.info('avatar', `${steamId}: profile not fully loaded: ${err instanceof Error ? err.message : String(err)}`);
 			this.failed.set(steamId, Date.now());
+			const text = err instanceof Error ? err.message : String(err);
+			// No picture address is not a failed read: the name and bans were read.
+			if (text === 'no avatar') return undefined;
+			if (text === 'bad image') return 'the picture could not be loaded';
+			return err instanceof Error && (err.name === 'TimeoutError' || /fetch failed|ENOTFOUND|ECONN/i.test(text)) ? 'Steam did not answer' : text;
 		}
 	}
 }

@@ -362,6 +362,7 @@ function registerIpc(): void {
 				hasAvatar: showAvatars && avatars.has(steamId),
 				pic: avatars.revision(steamId),
 				noProfile: avatars.isUnset(steamId),
+				unread: avatars.unreadable(steamId),
 				privacy: avatars.privacy(steamId) ?? null,
 				nickname: avatars.nickname(steamId) ?? null,
 				bans: watchBans ? banLabels(avatars.bans(steamId)) : [],
@@ -541,8 +542,19 @@ function registerIpc(): void {
 		openSteamWindow(id, accounts.get(id)!.accountName, await token(), target, { links });
 	});
 	handle('profilesRefresh', async (steamId?: unknown) => {
-		if (steamId === undefined || steamId === null) avatars.refreshAll();
-		else await avatars.readNow(known(steamId));
+		if (steamId === undefined || steamId === null) {
+			// All of them: one after the other in the background, and a message when done.
+			const ids = accounts.ids();
+			void avatars.readAll(ids).then((r) => {
+				const names = r.failed.map((id) => accounts.get(id)?.accountName ?? id);
+				const text = names.length ? `Steam profiles read: ${r.done} of ${ids.length}. No answer for ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}` : `All ${ids.length} Steam profiles read`;
+				log.info('profile', text);
+				notice(text, names.length > 0);
+			});
+			return;
+		}
+		const err = await avatars.readNow(known(steamId));
+		if (err) throw new UserError(`Could not read the Steam profile: ${err}`);
 	});
 	handle('profileSetup', async (steamId: unknown) => {
 		const id = known(steamId);
@@ -561,6 +573,8 @@ function registerIpc(): void {
 		if (avatars.isUnset(id)) throw new UserError('This account has no Steam profile yet. Set it up first');
 	};
 	handle('profileRandomName', () => randomName());
+	/** The window reports the start and the result of a bulk run, so the Log shows them next to each account's line. */
+	handle('bulkLog', (text: unknown) => log.info('action', `Bulk: ${str(text, 'text').slice(0, 300)}`));
 	handle('profileRename', async (steamId: unknown, name: unknown) => {
 		const id = known(steamId);
 		const used = await gated(async () => renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id)));
@@ -789,7 +803,7 @@ function registerIpc(): void {
 	/** The notice to show, or nothing: turned off, up to date, not reachable, or dismissed. */
 	handle('updateInfo', async (force: unknown) => {
 		if (!settings.get().checkUpdates && force !== true) return null;
-		const u = await updates.check();
+		const u = await updates.check(force === true);
 		return u && (force === true || u.version !== settings.get().updateDismissed) ? u : null;
 	});
 	handle('updateOpen', async () => {
@@ -1066,6 +1080,11 @@ async function startApp(): Promise<void> {
 	const imported = autoImport();
 	const names = [...dropped.added, ...imported.added];
 	if (names.length) win?.webContents.once('did-finish-load', () => notice(`Imported ${names.join(', ')}`));
+	// Anything that went wrong while starting (a damaged file, for example) is said right away, not only written to the Log.
+	win?.webContents.once('did-finish-load', () => {
+		const n = log.errorsSince(0);
+		if (n) notice(`${n} problem${n === 1 ? '' : 's'} found while starting. Details are on the Log page`, true);
+	});
 	schedulePolling();
 	startupCheck();
 	app.on('activate', () => {

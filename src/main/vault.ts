@@ -86,7 +86,7 @@ export class Vault {
 		if (!this.meta && existsSync(file)) {
 			// The vault file is damaged: the copy kept before the last change still opens the same data.
 			this.meta = load(`${file}.bak`);
-			if (this.meta) log.warn('vault', 'vault.json was damaged; the earlier copy (vault.json.bak) is used');
+			if (this.meta) log.error('vault', 'vault.json was damaged; the earlier copy (vault.json.bak) is used');
 		}
 	}
 
@@ -252,7 +252,7 @@ export class SecretFile {
 		try {
 			const backup = parse(this.decode(`${this.file}.bak`));
 			if (backup) {
-				log.warn('app', `${this.label}: the file was damaged; the earlier copy (.bak) is used`);
+				log.error('app', `${this.label}: the file was damaged; the earlier copy (.bak) is used`);
 				return backup;
 			}
 		} catch {

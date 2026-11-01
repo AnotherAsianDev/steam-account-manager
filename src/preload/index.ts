@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
 	profilesRefresh: (id?: string) => call('profilesRefresh', id),
 	profileSetup: (id: string) => call('profileSetup', id),
 	profileRandomName: () => call('profileRandomName'),
+	bulkLog: (text: string) => call('bulkLog', text),
 	profileRename: (id: string, name: string) => call('profileRename', id, name),
 	profilePhoto: (id: string) => call('profilePhoto', id),
 	profilePrivacy: (id: string, target: 'private' | 'public') => call('profilePrivacy', id, target),

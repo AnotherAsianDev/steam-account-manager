@@ -756,7 +756,18 @@ select { appearance: none; padding-right: 30px; background-image: url("data:imag
 .bulk-bar { position: sticky; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 14px; background: var(--raised); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); z-index: 5; }
 .bulk-bar[hidden] { display: none; }
 .bulk-count { font-weight: 550; margin-right: 4px; }
-.bulk-sep { flex: 1; }
 .bulk-line { flex: 1; min-width: 80px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .bulk-line i { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
 .dlg-list.plain li { color: var(--text); }
+
+/* Selection bar: two even rows. Count with All shown / None and Done on the first, the four actions across the second. */
+.bulk-bar { justify-content: space-between; row-gap: 10px; }
+.bulk-left { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; }
+.bulk-bar > .small { order: 2; }
+.bulk-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; order: 3; flex: 1 1 100%; }
+.bulk-actions .small { white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+.bulk-bar button.primary:disabled { background: var(--surface); color: var(--muted); box-shadow: none; border-color: var(--line); opacity: 1; }
+.bulk-who { flex: 1 1 120px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.dlg-list.report { max-height: 260px; }
+.dlg-list.report .fail { color: var(--danger); }
+.dlg-list.report .skip { color: var(--muted); }

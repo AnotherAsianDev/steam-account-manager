@@ -47,3 +47,11 @@ describe('UpdateChecker', () => {
 		expect((await new UpdateChecker(f, '0.4.2', async () => reply('v0.5.0')).check())?.version).toBe('0.5.0');
 	});
 });
+
+describe('manual check', () => {
+	it('says so when GitHub cannot be reached, instead of "up to date"', async () => {
+		await expect(new UpdateChecker(file(), '0.4.2', async () => { throw new Error('offline'); }).check(true)).rejects.toThrow(/Could not reach GitHub/);
+		await expect(new UpdateChecker(file(), '0.4.2', async () => ({ ok: false, status: 500, json: async () => ({}) })).check(true)).rejects.toThrow(/HTTP 500/);
+		await expect(new UpdateChecker(file(), '0.4.2', async () => ({ ok: false, status: 500, json: async () => ({}) })).check()).resolves.toBeUndefined();
+	});
+});

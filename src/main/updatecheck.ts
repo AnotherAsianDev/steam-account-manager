@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { writeFileAtomic } from './atomic';
+import { UserError } from './errors';
 import { log } from './log';
 
 /**
@@ -68,8 +69,11 @@ export class UpdateChecker {
 		}
 	}
 
-	/** The newer release, if there is one. Always asks GitHub; when that fails the last known answer is used. Network trouble is not an error. */
-	async check(): Promise<Update | undefined> {
+	/**
+	 * The newer release, if there is one. Always asks GitHub; when that fails the last known answer is used, quietly at start.
+	 * `strict` is for the "Check now" button: there a failed check is an error, not "up to date".
+	 */
+	async check(strict = false): Promise<Update | undefined> {
 		let state = this.load();
 		try {
 			const res = await this.fetcher(API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'steam-authenticator-update-check' }, signal: AbortSignal.timeout(8000) });
@@ -81,9 +85,12 @@ export class UpdateChecker {
 				// No release published (yet): nothing to offer.
 				state = { checkedAt: this.now() };
 				this.save(state);
+			} else if (strict) {
+				throw new UserError(`GitHub answered HTTP ${res.status}, so it could not be checked`);
 			}
 		} catch (err) {
 			log.info('update', `Could not check for updates: ${err instanceof Error ? err.message : 'unknown error'}`);
+			if (strict) throw err instanceof UserError ? err : new UserError('Could not reach GitHub to check for updates');
 		}
 		return state.latest && isNewer(state.latest.version, this.current) ? state.latest : undefined;
 	}
