@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.2
+
+- Random nicknames now also include single nice-sounding words (Aurora, solstice, Willow7) next to the two-word and number forms.
+
 ## 0.11.1
 
 - The selection bar is tidied: count and All shown / None on the left, the four actions in one even row, Done at the end. Narrow windows wrap by group instead of leaving a lone button, and buttons without a selection look plainly switched off.
