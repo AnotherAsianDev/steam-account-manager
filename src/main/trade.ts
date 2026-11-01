@@ -86,7 +86,7 @@ export interface HttpRequest {
 	method: 'GET' | 'POST';
 	url: string;
 	headers: Record<string, string>;
-	body?: string;
+	body?: string | Uint8Array;
 }
 export type Http = (req: HttpRequest) => Promise<{ status: number; text: string; location?: string }>;
 
@@ -94,17 +94,17 @@ export const fetchHttp: Http = async (req) => {
 	const res = await fetch(req.url, {
 		method: req.method,
 		headers: req.headers,
-		...(req.body !== undefined ? { body: req.body } : {}),
+		...(req.body !== undefined ? { body: req.body as BodyInit } : {}),
 		redirect: 'manual',
 		signal: AbortSignal.timeout(30_000)
 	});
 	return { status: res.status, text: await res.text(), ...(res.headers.get('location') ? { location: res.headers.get('location')! } : {}) };
 };
 
-const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+export const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
 const cap = (s: string): string => (s.length > 300 ? `${s.slice(0, 300)}…` : s);
 
-function checkStatus(status: number, what: string): void {
+export function checkStatus(status: number, what: string): void {
 	if (status === 401 || status === 403 || (status >= 300 && status < 400)) {
 		log.warn('trade', `Steam answered HTTP ${status} for ${what}`);
 		throw new UserError(`Steam refused ${what} (HTTP ${status}). Signing in again on the account page can help. If it keeps happening, Steam does not accept this account's session for this step`);
@@ -206,25 +206,6 @@ export async function fetchInventory(http: Http, steamId: string, game: Game, co
  * Sets up the Steam Community profile of an account: the page behind the "Set Up Steam Profile" button is the profile editor.
  * The editor's form is saved once with the name the account already has. Steam needs a minute or two before its public profile shows the change, so that is not waited for.
  */
-export async function setupProfile(http: Http, steamId: string, cookie: string): Promise<void> {
-	const sessionId = randomBytes(12).toString('hex');
-	const headers = { 'User-Agent': BROWSER, Cookie: `${cookie}; sessionid=${sessionId}` };
-	const edit = `https://steamcommunity.com/profiles/${steamId}/edit?welcomed=1`;
-	let res = await http({ method: 'GET', url: edit, headers });
-	for (let hop = 0; hop < 3 && res.status >= 300 && res.status < 400 && res.location; hop++) {
-		const next = new URL(res.location, edit);
-		if (next.protocol !== 'https:' || next.hostname !== 'steamcommunity.com' || /\/login/i.test(next.pathname)) break;
-		res = await http({ method: 'GET', url: next.toString(), headers });
-	}
-	checkStatus(res.status, 'opening the profile editor');
-	if (!/name="personaName"|profile_edit|edit_profile/i.test(res.text)) throw new UserError('Steam did not open the profile editor. Sign in again on the account page and retry');
-	// Save the form as Steam shows it: the name stays as it is, everything else stays empty.
-	const name = /name="personaName"[^>]*value="([^"]*)"/.exec(res.text)?.[1] ?? /value="([^"]*)"[^>]*name="personaName"/.exec(res.text)?.[1] ?? '';
-	const form = new URLSearchParams({ sessionID: sessionId, type: 'profileSave', personaName: name.replace(/&amp;/g, '&').replace(/&quot;/g, '"'), real_name: '', summary: 'No information given.', country: '', state: '', city: '', customURL: '', json: '1', hide_profile_awards: '0' });
-	const saved = await http({ method: 'POST', url: `https://steamcommunity.com/profiles/${steamId}/edit/`, headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded', Origin: 'https://steamcommunity.com', Referer: edit }, body: form.toString() });
-	checkStatus(saved.status, 'saving the profile');
-}
-
 export function chunk<T>(list: readonly T[], size = OFFER_SIZE): T[][] {
 	const out: T[][] = [];
 	for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));

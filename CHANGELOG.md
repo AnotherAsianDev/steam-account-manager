@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- The profile's visibility is detected (public, friends only or private) and shown on the account page.
+- Right-click menu, "Change Steam profile": make the profile private or public (private also closes inventory, games and friends; public only opens the profile itself), change the profile name by hand or with a random name, set a random profile picture (a random photo from picsum.photos).
+- The same three actions are on the account page. Replacing the picture and making a profile public ask for a second click.
+- A rename keeps the summary, location and custom address of the profile. If Steam's editor looks different than expected, nothing is changed.
+- Each change is written to the log with the account and the result.
+
 ## 0.9.19
 
 - The small messages at the bottom stay longer (4.5 s, errors 6 s, longer texts up to 12 s) and show a thin line underneath that runs out, so you can see when they disappear. Hovering a message pauses it.

@@ -11,7 +11,9 @@ import { findMaFileFolders, importFolder, normalizeStoreFolder, readMaFile } fro
 import { CredentialStore } from './credentials';
 import { FolderWatcher } from './watcher';
 import { clockOffset, steamNow, syncClock } from './clock';
-import { GAMES, accountIdOf, chunk, fetchHttp, cancelOffer, fetchInventory, setupProfile, fetchOpenOffers, parseTradeLink, sendOffer } from './trade';
+import { GAMES, accountIdOf, chunk, fetchHttp, cancelOffer, fetchInventory, fetchOpenOffers, parseTradeLink, sendOffer } from './trade';
+import { setupProfile, renameProfile, uploadAvatar, randomPhoto, setVisibility } from './steamprofile';
+import { randomName } from './randomname';
 import { sessionCookie } from './sessions';
 import { openBackup, sealBackup, type BackupAccount } from './backup';
 import { ConfirmationsClient, fetchTransport, type Action } from './confirmations';
@@ -207,9 +209,14 @@ const AUDIT: Record<string, (a: any[]) => string> = {
 	tradeSend: (a) => `${who(a[0])}: sending items`,
 	tradeCancel: (a) => `${who(a[0])}: cancelling an offer`,
 	profileSetup: (a) => `${who(a[0])}: setting up the Steam profile`,
+	profileRename: (a) => `${who(a[0])}: changing the Steam profile name`,
+	profilePhoto: (a) => `${who(a[0])}: uploading a random profile picture`,
+	profilePrivacy: (a) => `${who(a[0])}: making the Steam profile ${String(a[1])}`,
 	openSteam: (a) => `${who(a[0])}: opened ${String(a[1])} on Steam (signed in)`,
 	setSettings: (a) => `Settings changed: ${a[0] && typeof a[0] === 'object' ? Object.keys(a[0]).join(', ') : ''}`
 };
+/** Handlers that write a more exact line of their own once they have finished. */
+const LOGS_ITSELF = new Set(['tradeSend', 'profileSetup', 'profileRename', 'profilePhoto', 'profilePrivacy']);
 function handle<T>(channel: string, fn: (...args: any[]) => T | Promise<T>): void {
 	ipcMain.handle(channel, async (event, ...args) => {
 		// Only our own window may call in.
@@ -218,7 +225,7 @@ function handle<T>(channel: string, fn: (...args: any[]) => T | Promise<T>): voi
 		try { what = AUDIT[channel]?.(args); } catch { /* a log line must never break an action */ }
 		try {
 			const value = await fn(...args);
-			if (what && channel !== 'tradeSend' && channel !== 'profileSetup') log.info('action', what);
+			if (what && !LOGS_ITSELF.has(channel)) log.info('action', what);
 			return { ok: true, value };
 		} catch (err) {
 			if (!(err instanceof UserError)) log.error('app', `Unexpected error in ${channel}`, err);
@@ -354,6 +361,7 @@ function registerIpc(): void {
 				remaining: secondsRemaining(t),
 				hasAvatar: showAvatars && avatars.has(steamId),
 				noProfile: avatars.isUnset(steamId),
+				privacy: avatars.privacy(steamId) ?? null,
 				nickname: avatars.nickname(steamId) ?? null,
 				bans: watchBans ? banLabels(avatars.bans(steamId)) : [],
 				tags: meta.get(steamId).tags,
@@ -391,7 +399,7 @@ function registerIpc(): void {
 	});
 	handle('detail', (steamId: unknown) => {
 		const a = accounts.get(known(steamId))!;
-		return { steamId: a.steamId, name: a.accountName, nickname: avatars.nickname(a.steamId) ?? null, hasRevocation: !!a.revocationCode, hasPassword: accounts.hasPassword(a.steamId), pinned: meta.get(a.steamId).pinned, note: meta.get(a.steamId).note, tags: meta.get(a.steamId).tags, bans: banLabels(avatars.bans(a.steamId)), banNote: banNote(avatars.bans(a.steamId)), banHistory: avatars.history(a.steamId), noProfile: avatars.isUnset(a.steamId), sessionDays: accounts.sessionDaysLeft(a.steamId) ?? null };
+		return { steamId: a.steamId, name: a.accountName, nickname: avatars.nickname(a.steamId) ?? null, hasRevocation: !!a.revocationCode, hasPassword: accounts.hasPassword(a.steamId), pinned: meta.get(a.steamId).pinned, note: meta.get(a.steamId).note, tags: meta.get(a.steamId).tags, bans: banLabels(avatars.bans(a.steamId)), banNote: banNote(avatars.bans(a.steamId)), banHistory: avatars.history(a.steamId), noProfile: avatars.isUnset(a.steamId), privacy: avatars.privacy(a.steamId) ?? null, sessionDays: accounts.sessionDaysLeft(a.steamId) ?? null };
 	});
 	handle('apiKeyState', () => apiKeyState());
 	handle('apiKeySet', async (key: unknown) => {
@@ -540,6 +548,32 @@ function registerIpc(): void {
 		await setupProfile(fetchHttp, id, await cookieOf(id));
 		avatars.forget(id);
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set up`);
+	});
+	const needsProfile = (id: string): void => {
+		if (avatars.isUnset(id)) throw new UserError('This account has no Steam profile yet. Set it up first');
+	};
+	handle('profileRandomName', () => randomName());
+	handle('profileRename', async (steamId: unknown, name: unknown) => {
+		const id = known(steamId);
+		const used = await renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id));
+		avatars.forget(id);
+		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile name changed to "${used}"`);
+		return used;
+	});
+	handle('profilePhoto', async (steamId: unknown) => {
+		const id = known(steamId);
+		needsProfile(id);
+		await uploadAvatar(fetchHttp, id, await cookieOf(id), await randomPhoto());
+		avatars.forget(id);
+		log.info('profile', `${accounts.get(id)!.accountName}: new random profile picture uploaded`);
+	});
+	handle('profilePrivacy', async (steamId: unknown, target: unknown) => {
+		const id = known(steamId);
+		if (target !== 'private' && target !== 'public') throw new UserError('Unknown setting');
+		needsProfile(id);
+		await setVisibility(fetchHttp, id, await cookieOf(id), target);
+		avatars.forget(id);
+		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set to ${target}`);
 	});
 	// ---- Sending items by trade offer ----
 	const gameOf = (key: unknown) => {

@@ -15,7 +15,7 @@ A lean desktop Steam Guard authenticator for Windows. Plain maFiles next to the 
 </tr>
 <tr>
 <td width="50%"><img src="docs/screenshots/confirmations.png" alt="Confirmations"><br><sub>Confirmations across all accounts, grouped and filterable</sub></td>
-<td width="50%"><img src="docs/screenshots/account.png" alt="Account page"><br><sub>Account page: copy fields, open Steam signed in</sub></td>
+<td width="50%"><img src="docs/screenshots/account.png" alt="Account page"><br><sub>Account page: Steam profile (visibility, name, picture), copy fields, open Steam signed in</sub></td>
 </tr>
 <tr>
 <td width="50%"><img src="docs/screenshots/todo.png" alt="To do"><br><sub>To do: what is missing per account</sub></td>
@@ -54,6 +54,7 @@ Minimal desktop Steam Guard authenticator (Electron + TypeScript, no UI framewor
   A refresh token is kept in `sessions.json` (plain text).
 - **Copy** username, password (if saved), shared secret, identity secret, revocation code, SteamID64.
 - **Profile pictures** from the public profile (no API key), at most once a week per account.
+- **Steam profile changes** from the right-click menu or the account page: show whether the profile is public, friends only or private and switch it between private and public, change the profile name (typed or random), set a random profile picture from the web. These use the same web calls the Steam website makes with the saved sign-in, so Steam can change or refuse them; a refusal is shown in plain words.
 - **Trades tab, open offers:** see offers that nobody accepted yet, per account or all at once, and cancel them.
 - **Trades tab, overview:** how many tradable and locked items every account holds in a game, with a total.
 - **Backup:** one encrypted file with all maFiles, saved passwords, notes and tags (Settings, Import and updates). Restoring only adds missing accounts.

@@ -56,6 +56,17 @@ export function extractPersonaName(xml: string): string | undefined {
 	return name || undefined;
 }
 
+export type PrivacyState = 'public' | 'friends' | 'private';
+/** Who can see the profile, from the same public profile XML. */
+export function extractPrivacy(xml: string): PrivacyState | undefined {
+	const word = /<privacyState>\s*([A-Za-z]+)\s*<\/privacyState>/.exec(xml)?.[1]?.toLowerCase();
+	if (word === 'public') return 'public';
+	if (word === 'friendsonly') return 'friends';
+	if (word === 'private') return 'private';
+	const n = /<visibilityState>\s*(\d)\s*<\/visibilityState>/.exec(xml)?.[1];
+	return n === '3' ? 'public' : n === '2' ? 'friends' : n === '1' ? 'private' : undefined;
+}
+
 export interface Bans {
 	/** A VAC ban is on record. */
 	vac: boolean;
@@ -107,6 +118,10 @@ interface Profile {
 	unset?: boolean;
 	/** Read by a version that knows about `unset`; older records are read once more. */
 	probed?: boolean;
+	/** Who can see the profile, when Steam said. */
+	privacy?: PrivacyState;
+	/** The visibility was looked for (records from before it existed are read once more). */
+	privRead?: true;
 	/** What changed about the bans and when, newest last. */
 	events?: { at: number; what: string }[];
 }
@@ -207,6 +222,11 @@ export class AvatarCache {
 		this.checkedAt.delete(steamId);
 	}
 
+	/** Public, friends only or private, once Steam has said. */
+	privacy(steamId: string): PrivacyState | undefined {
+		return this.profiles[steamId]?.privacy;
+	}
+
 	/** The profile name, once it has been fetched. */
 	nickname(steamId: string): string | undefined {
 		return this.profiles[steamId]?.name;
@@ -283,7 +303,7 @@ export class AvatarCache {
 		if (now - (this.checkedAt.get(steamId) ?? 0) < 300_000) return;
 		this.checkedAt.set(steamId, now);
 		const p = this.profiles[steamId];
-		const fresh = p && p.probed === true && (p.name !== undefined || p.unset === true) && now - p.checked < (want.bans ? BANS_AGE_MS : MAX_AGE_MS);
+		const fresh = p && p.probed === true && p.privRead === true && (p.name !== undefined || p.unset === true) && now - p.checked < (want.bans ? BANS_AGE_MS : MAX_AGE_MS);
 		const haveBans = !want.bans || this.apiMode || p?.bans !== undefined;
 		// A missing picture is no reason to ask again when the profile has no picture address at all (failed until the retry time).
 		const haveImage = !want.image || this.has(steamId);
@@ -318,13 +338,17 @@ export class AvatarCache {
 			}
 			if (name) next.name = name;
 			next.probed = true;
+			next.privRead = true;
+			const privacy = extractPrivacy(xml);
+			if (privacy) next.privacy = privacy;
+			else delete next.privacy;
 			// Steam's XML for an account without a profile has an empty name and says so in the privacy message.
 			if (isProfileUnset(xml)) next.unset = true;
 			else if (/<steamID64>/.test(xml)) delete next.unset;
 			if (!/<steamID64>/.test(xml) || next.unset) log.info('avatar', `${steamId}: Steam shows no profile for this account (${xml.length} bytes: "${xml.replace(/\s+/g, ' ').slice(0, 90)}")`);
 			const bans = this.apiMode ? undefined : extractBans(xml);
 			if (bans) next.bans = bans;
-			let changed = name !== before?.name || JSON.stringify(bans) !== JSON.stringify(before?.bans);
+			let changed = name !== before?.name || privacy !== before?.privacy || JSON.stringify(bans) !== JSON.stringify(before?.bans);
 			this.profiles[steamId] = next;
 			if (bans) this.noteNewBan(steamId, before?.bans, bans);
 			if (want.image) {

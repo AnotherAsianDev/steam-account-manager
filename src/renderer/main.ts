@@ -8,6 +8,7 @@ interface Row {
 	remaining: number;
 	hasAvatar: boolean;
 	noProfile: boolean;
+	privacy: Privacy | null;
 	pinned: boolean;
 	note: string;
 	tags: string[];
@@ -20,6 +21,7 @@ interface Row {
 	state: 'idle' | 'loading' | 'ok' | 'signin' | 'error';
 	pending: number | null;
 }
+type Privacy = 'public' | 'friends' | 'private';
 interface TradeItem {
 	assetId: string;
 	group: string;
@@ -135,7 +137,7 @@ declare const api: {
 	avatar(id: string): P<string | null>;
 	copyCode(id: string): P<void>;
 	copyField(id: string, field: string): P<void>;
-	detail(id: string): P<{ steamId: string; name: string; nickname: string | null; hasRevocation: boolean; hasPassword: boolean; pinned: boolean; note: string; tags: string[]; bans: string[]; banNote: string; banHistory: { at: number; what: string }[]; sessionDays: number | null; noProfile: boolean }>;
+	detail(id: string): P<{ steamId: string; name: string; nickname: string | null; hasRevocation: boolean; hasPassword: boolean; pinned: boolean; note: string; tags: string[]; bans: string[]; banNote: string; banHistory: { at: number; what: string }[]; sessionDays: number | null; noProfile: boolean; privacy: Privacy | null }>;
 	setMeta(id: string, patch: { pinned?: boolean; note?: string; tags?: string[] | string; skipBulk?: boolean }): P<{ pinned: boolean; note: string; tags: string[]; skipBulk: boolean }>;
 	apiKeyState(): P<{ has: boolean; locked: boolean; hint: string }>;
 	apiKeySet(key: string): P<{ has: boolean; locked: boolean; hint: string }>;
@@ -167,6 +169,10 @@ declare const api: {
 	openSteam(id: string, target: string, link?: string): P<void>;
 	profileSetup(id: string): P<void>;
 	profilesRefresh(id?: string): P<void>;
+	profileRandomName(): P<string>;
+	profileRename(id: string, name: string): P<string>;
+	profilePhoto(id: string): P<void>;
+	profilePrivacy(id: string, target: 'private' | 'public'): P<void>;
 	version(): P<string>;
 	updateInfo(force?: boolean): P<{ version: string; url: string } | null>;
 	updateOpen(): P<void>;
@@ -768,18 +774,33 @@ interface DialogField {
 	name: string;
 	label: string;
 	numeric?: boolean;
+	/** Shown as normal text (the default hides what is typed). */
+	plain?: { value: string; max: number; fill?: { label: string; get: () => Promise<string | undefined> } };
 }
 /** A small form in a window of its own. `run` returns an error to show, or nothing to close. */
 function dialog(title: string, text: string, fields: DialogField[], submit: string, run: (v: Record<string, string>) => Promise<string | undefined>, list: string[] = []): void {
 	document.querySelector('.modal')?.remove();
-	const inputs = fields.map((f) => el('input', { type: 'password', autocomplete: 'off', spellcheck: false, placeholder: f.label, ariaLabel: f.label, ...(f.numeric ? { inputMode: 'numeric' as const } : {}) }));
+	const inputs = fields.map((f) => el('input', { type: f.plain ? 'text' : 'password', autocomplete: 'off', spellcheck: false, placeholder: f.label, ariaLabel: f.label, ...(f.plain ? { value: f.plain.value, maxLength: f.plain.max } : {}), ...(f.numeric ? { inputMode: 'numeric' as const } : {}) }));
+	const shown = fields.map((f, i) => {
+		const fill = f.plain?.fill;
+		if (!fill) return inputs[i]!;
+		const b = el('button', { class: 'small', type: 'button', textContent: fill.label });
+		b.addEventListener('click', async () => {
+			b.disabled = true;
+			const v = await fill.get();
+			b.disabled = false;
+			if (v !== undefined) inputs[i]!.value = v;
+			inputs[i]!.focus();
+		});
+		return el('div', { class: 'dlg-fill' }, inputs[i]!, b);
+	});
 	const err = el('p', { class: 'hint error', textContent: '' });
 	const btn = el('button', { class: 'primary', type: 'submit', textContent: submit });
 	const close = (): void => {
 		overlay.remove();
 		document.removeEventListener('keydown', onKey);
 	};
-	const form = el('form', { class: 'signin' }, el('h1', { textContent: title }), el('p', { class: 'hint', textContent: text }), ...(list.length ? [el('ul', { class: 'dlg-list' }, ...list.map((n) => el('li', { textContent: n })))] : []), ...inputs, err, el('div', { class: 'row-actions' }, el('button', { class: 'small', type: 'button', textContent: 'Cancel', onclick: close }), btn));
+	const form = el('form', { class: 'signin' }, el('h1', { textContent: title }), el('p', { class: 'hint', textContent: text }), ...(list.length ? [el('ul', { class: 'dlg-list' }, ...list.map((n) => el('li', { textContent: n })))] : []), ...shown, err, el('div', { class: 'row-actions' }, el('button', { class: 'small', type: 'button', textContent: 'Cancel', onclick: close }), btn));
 	const overlay = el('div', { class: 'modal' }, el('div', { class: 'lock-card left' }, form));
 	const onKey = (e: KeyboardEvent): void => {
 		if (e.key === 'Escape') close();
@@ -816,7 +837,7 @@ function banIcon(label: string): string {
 /** The small marks after an account's name: bans, waiting confirmations, sign-in problems, tags. Rebuilt only when something changed, so tooltips do not flicker. */
 function drawFlags(li: HTMLElement, row: Row): void {
 	const box = li.querySelector<HTMLElement>('.flags')!;
-	const key = JSON.stringify([row.state, row.pending, row.bans, row.sessionDays, row.tags, row.note, row.noProfile]);
+	const key = JSON.stringify([row.state, row.pending, row.bans, row.sessionDays, row.tags, row.note, row.noProfile, row.privacy]);
 	if (box.dataset['key'] === key) return;
 	box.dataset['key'] = key;
 	const flag = (cls: string, content: string, title: string, go: () => void): HTMLElement => {
@@ -840,6 +861,30 @@ function drawFlags(li: HTMLElement, row: Row): void {
 	if (row.tags[0]) nodes.push(el('span', { class: 'tag', textContent: row.tags[0] }));
 	box.replaceChildren(...nodes);
 }
+
+const privacyText = (p: Privacy | null): string => (p === 'public' ? 'public' : p === 'friends' ? 'friends only' : p === 'private' ? 'private' : 'not known yet');
+/** Public is made private; anything else (private, friends only, unknown) is made public. Unknown goes private, the safer direction. */
+const flipTarget = (p: Privacy | null): 'private' | 'public' => (p === 'private' || p === 'friends' ? 'public' : 'private');
+
+/** What can be changed on an account's Steam profile. Used by the right-click menu and the details page. */
+const profileChanges = (id: string, current: { noProfile: boolean; privacy: Privacy | null; nickname: string | null }, done: () => Promise<void> | void): Leaf[] => {
+	const target = flipTarget(current.privacy);
+	return [
+		{ label: 'Change profile name…', run: () => {
+			dialog('Change the Steam profile name', 'The new name shows on the profile at once. Steam keeps a list of earlier names that others can see.', [{ name: 'name', label: 'Profile name', plain: { value: current.nickname ?? '', max: 32, fill: { label: 'Random', get: async () => { const r = await api.profileRandomName(); return r.ok ? r.value : undefined; } } } }], 'Change name', async (v) => {
+				const r = await api.profileRename(id, v['name'] ?? '');
+				if (!r.ok) return r.error;
+				toast(`Name changed to "${r.value}". Steam takes a minute or two to show it`);
+				await done();
+				return undefined;
+			});
+		} },
+		...(current.noProfile ? [] : [
+			{ label: 'Random profile picture', confirm: 'Click again to replace the picture', run: async () => { const r = await api.profilePhoto(id); toast(r.ok ? 'New picture sent. Steam takes a minute or two to show it' : r.error, !r.ok); await done(); } },
+			{ label: target === 'private' ? 'Make profile private' : 'Make profile public', ...(target === 'public' ? { confirm: 'Click again to make it public' } : {}), run: async () => { const r = await api.profilePrivacy(id, target); toast(r.ok ? `Profile is now ${target}. Steam takes a minute or two to show it` : r.error, !r.ok); await done(); } }
+		])
+	];
+};
 
 /** Progress of "set up all Steam profiles", kept outside the screen because the overview is redrawn every second. */
 let profileRun: { n: number; total: number } | null = null;
@@ -963,6 +1008,9 @@ async function listScreen(): Promise<void> {
 			{ label: 'Check confirmations now', run: async () => { const r = await api.refresh(id); toast(r.ok ? 'Checked' : r.error, !r.ok); await refresh(); } },
 			{ label: 'Read Steam profile again', run: async () => { await api.profilesRefresh(id); toast('Reading the Steam profile again'); await refresh(); } },
 			...(row.noProfile ? [{ label: 'Set up Steam profile', run: async () => { const r = await api.profileSetup(id); toast(r.ok ? 'Steam profile set up. Steam takes a minute or two to show it' : r.error, !r.ok); await refresh(); } }] : []),
+			'sep',
+			{ head: 'Change Steam profile' },
+			...profileChanges(id, row, refresh),
 			'sep',
 			{ label: row.pinned ? 'Unpin' : 'Pin to the top', run: async () => { const r = await api.setMeta(id, { pinned: !row.pinned }); if (!r.ok) return toast(r.error, true); await refresh(); } },
 			{ label: 'Move to trash', confirm: 'Click again to move to trash', danger: true, run: async () => { const r = await api.remove(id); if (!r.ok) return toast(r.error, true); toast('Moved to the trash. You can restore it from Trash'); await refresh(); } }
@@ -2013,9 +2061,27 @@ async function detailScreen(id: string): Promise<void> {
 					el('p', { class: 'hint', textContent: `${d.value.banNote ? d.value.banNote + ' ' : ''}As of the last check. Turn this off under Settings, Watch for bans.` }),
 					...(d.value.banHistory.length ? [el('ul', { class: 'ban-history' }, ...[...d.value.banHistory].reverse().map((e) => el('li', {}, el('span', { class: 'hint', textContent: new Date(e.at).toLocaleDateString() }), el('span', { textContent: e.what }))))] : []))] : []),
 				el('section', { class: 'group' }, el('h2', { class: 'todo-title', textContent: 'Steam profile' }),
-					el('p', { class: d.value.noProfile ? 'hint warn' : 'hint', textContent: d.value.noProfile ? 'This account has no Steam Community profile yet. Steam needs one for trading and for the nickname and picture to show. "Set up" does the same as the "Set Up Steam Profile" button on the Steam website.' : 'Name, picture and bans come from the public Steam profile. Read it again after a change on Steam.' }),
+					el('p', { class: d.value.noProfile ? 'hint warn' : 'hint', textContent: d.value.noProfile ? 'This account has no Steam Community profile yet. Steam needs one for trading and for the nickname and picture to show. "Set up" does the same as the "Set Up Steam Profile" button on the Steam website.' : `The profile is ${privacyText(d.value.privacy)}. Name, picture and bans come from the public Steam profile. Read it again after a change on Steam.` }),
 					el('div', { class: 'row-actions left' },
 						el('button', { class: 'small', type: 'button', textContent: 'Read profile again', onclick: async () => { await api.profilesRefresh(id); toast('Reading the Steam profile again. This takes a moment'); } }),
+						...profileChanges(id, d.value, () => navigate({ name: 'detail', id })).map((item) => {
+							const b = el('button', { class: 'small', type: 'button', textContent: item.label });
+							let armed = false;
+							b.addEventListener('click', async () => {
+								if (item.confirm && !armed) {
+									armed = true;
+									b.textContent = item.confirm;
+									window.setTimeout(() => { armed = false; b.textContent = item.label; }, 4000);
+									return;
+								}
+								armed = false;
+								b.disabled = true;
+								await item.run();
+								b.disabled = false;
+								b.textContent = item.label;
+							});
+							return b;
+						}),
 						...(d.value.noProfile ? [el('button', { class: 'small primary', type: 'button', textContent: 'Set up Steam profile', onclick: async (e: Event) => {
 							const b = e.currentTarget as HTMLButtonElement;
 							b.disabled = true;

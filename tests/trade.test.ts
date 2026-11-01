@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { GAMES, accountIdOf, chunk, setupProfile, fetchInventory, parseInventory, parseOpenOffers, parseTradeLink, unlockTime, sendOffer, type Http, type Item } from '../src/main/trade';
+import { setupProfile } from '../src/main/steamprofile';
+import { GAMES, accountIdOf, chunk, fetchInventory, parseInventory, parseOpenOffers, parseTradeLink, unlockTime, sendOffer, type Http, type Item } from '../src/main/trade';
 
 const LINK = 'https://steamcommunity.com/tradeoffer/new/?partner=1039734271&token=AbCd_-12';
 const item = (n: number): Item => ({ assetId: String(n), group: 'g', name: 'Case', type: 'Container', icon: 'x', color: '', amount: 1 });
@@ -81,7 +82,7 @@ describe('sending', () => {
 	it('posts the offer the way the website does', async () => {
 		let seen: { url: string; body: URLSearchParams; cookie: string } | undefined;
 		const http: Http = async (r) => {
-			seen = { url: r.url, body: new URLSearchParams(r.body), cookie: r.headers['Cookie']! };
+			seen = { url: r.url, body: new URLSearchParams(String(r.body ?? '')), cookie: r.headers['Cookie']! };
 			return { status: 200, text: JSON.stringify({ tradeofferid: '555', needs_mobile_confirmation: true }) };
 		};
 		const sent = await sendOffer(http, 'steamLoginSecure=x', parseTradeLink(LINK), GAMES[0]!, [item(7), item(8)]);
@@ -126,7 +127,7 @@ describe('setupProfile', () => {
 	it('opens the editor, then saves the form with the name the account already has', async () => {
 		const seen: string[] = [];
 		let body = '';
-		await setupProfile(async (req) => { seen.push(`${req.method} ${req.url}`); if (req.method === 'POST') body = req.body ?? ''; return { status: 200, text: editor }; }, ID, 'c');
+		await setupProfile(async (req) => { seen.push(`${req.method} ${req.url}`); if (req.method === 'POST') body = String(req.body ?? ''); return { status: 200, text: editor }; }, ID, 'c');
 		expect(seen).toEqual([`GET https://steamcommunity.com/profiles/${ID}/edit?welcomed=1`, `POST https://steamcommunity.com/profiles/${ID}/edit/`]);
 		expect(body).toContain('type=profileSave');
 		expect(body).toContain('personaName=naul');
