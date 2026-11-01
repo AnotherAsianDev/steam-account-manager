@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.2
+
+- New logo: a smoother shield with SAM in white, used for the app icon, sidebar, lock screen and About page.
+
 ## 0.12.1
 
 - The update check and links now point at the renamed repository `AnotherAsianDev/steam-account-manager`.

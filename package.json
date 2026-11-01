@@ -1,6 +1,6 @@
 {
   "name": "steam-account-manager",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "private": true,
   "description": "Minimal desktop Steam Guard authenticator and account manager",
   "license": "MIT",
