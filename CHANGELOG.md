@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.3
+
+- The private-profile icon (and the saved visibility) is now remembered across restarts. It was saved but never loaded again, so every start had to read it from Steam first. A page from Steam without a visibility no longer wipes what is known.
+- A new random picture shows in the Accounts list and on the account page at once. The window kept the old picture it had loaded.
+- Random names look like people: "Jonas", "Emma Keller", "marco95", "lena_weber" instead of word pairs.
+
 ## 0.10.2
 
 - A rename, a new picture or a visibility change shows in the app immediately. The app then keeps reading the profile for about two minutes and ignores older answers while Steam still shows the old state, so nothing flips back.

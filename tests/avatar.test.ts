@@ -143,3 +143,30 @@ describe('a change just made on Steam', () => {
 		expect(cache.get(ID)).toContain(Buffer.from([9, 9, 9]).toString('base64'));
 	});
 });
+
+describe('visibility after a restart', () => {
+	it('is remembered and not read again while fresh; a page without it changes nothing', async () => {
+		let body = `<profile><steamID64>${ID}</steamID64><privacyState>private</privacyState><steamID><![CDATA[Olam]]></steamID><avatarFull><![CDATA[https://avatars.steamstatic.com/abc_full.jpg]]></avatarFull></profile>`;
+		let hits = 0;
+		vi.stubGlobal('fetch', async (url: string) => { hits++; return String(url).includes('xml=1') ? new Response(body) : new Response(Buffer.from([1, 2, 3])); });
+		const dir = mkdtempSync(join(tmpdir(), 'av-'));
+		const first = new AvatarCache(dir, () => undefined, 'https://example.test/profiles');
+		await first.readNow(ID);
+		const again = new AvatarCache(dir, () => undefined, 'https://example.test/profiles');
+		expect(again.privacy(ID)).toBe('private');
+		const before = hits;
+		again.ensure(ID, { image: true, bans: false });
+		await new Promise((r) => setTimeout(r, 50));
+		expect(hits).toBe(before);
+		body = '<response><error>try later</error></response>';
+		await again.readNow(ID);
+		expect(again.privacy(ID)).toBe('private');
+	});
+	it('counts a replaced picture so the window loads it again', async () => {
+		vi.stubGlobal('fetch', async () => new Response(Buffer.from([1])));
+		const cache = new AvatarCache(mkdtempSync(join(tmpdir(), 'av-')), () => undefined, 'https://example.test/profiles');
+		const n = cache.revision(ID);
+		cache.applied(ID, { picture: Buffer.from([1, 2]) });
+		expect(cache.revision(ID)).toBe(n + 1);
+	});
+});

@@ -1,10 +1,33 @@
 import { randomInt } from 'node:crypto';
 
-const FIRST = ['Quiet', 'Silent', 'Swift', 'Lucky', 'Rusty', 'Frozen', 'Hidden', 'Misty', 'Golden', 'Silver', 'Crimson', 'Cosmic', 'Lazy', 'Brave', 'Calm', 'Wild', 'Mellow', 'Sunny', 'Dusty', 'Gentle', 'Clever', 'Happy', 'Shy', 'Bright', 'Stormy', 'Velvet', 'Amber', 'Cobalt', 'Hazel', 'Mossy', 'Nimble', 'Proud', 'Tiny', 'Wandering', 'Winter', 'Summer', 'Midnight', 'Copper', 'Ivory', 'Jolly'];
-const SECOND = ['Falcon', 'Otter', 'Fox', 'Panda', 'Lynx', 'Owl', 'Badger', 'Heron', 'Wolf', 'Raven', 'Comet', 'River', 'Meadow', 'Harbor', 'Pebble', 'Maple', 'Cedar', 'Willow', 'Ember', 'Breeze', 'Canyon', 'Glacier', 'Lantern', 'Sparrow', 'Tiger', 'Koala', 'Dolphin', 'Pine', 'Thunder', 'Orchard', 'Voyager', 'Wanderer', 'Pilot', 'Ranger', 'Sailor', 'Drifter', 'Echo', 'Horizon', 'Island', 'Summit'];
+const FIRST = ['Lukas', 'Jonas', 'Noah', 'Leon', 'Luca', 'Elias', 'Finn', 'Tim', 'Nico', 'Marco', 'David', 'Daniel', 'Simon', 'Julian', 'Fabian', 'Dominik', 'Patrick', 'Sven', 'Marc', 'Andre', 'Kevin', 'Alex', 'Max', 'Ben', 'Jan', 'Felix', 'Moritz', 'Oliver', 'Thomas', 'Michael', 'Stefan', 'Reto', 'Pascal', 'Raphael', 'Dario', 'Mattia', 'Enzo', 'Liam', 'Ethan', 'Jack', 'Ryan', 'Tom', 'Chris', 'Sam', 'Adrian', 'Samuel', 'Emil', 'Philipp', 'Robin', 'Yannick',
+	'Emma', 'Mia', 'Lena', 'Anna', 'Laura', 'Sarah', 'Julia', 'Lara', 'Nina', 'Sophie', 'Lea', 'Elena', 'Giulia', 'Chiara', 'Alina', 'Jana', 'Selina', 'Noemi', 'Livia', 'Amelie', 'Hannah', 'Clara', 'Sara', 'Eva', 'Marie', 'Lisa', 'Vanessa', 'Melanie', 'Jessica', 'Katrin'];
+const LAST = ['Meier', 'Keller', 'Weber', 'Huber', 'Schmid', 'Fischer', 'Brunner', 'Baumann', 'Gerber', 'Frei', 'Moser', 'Zimmermann', 'Steiner', 'Roth', 'Graf', 'Widmer', 'Lehmann', 'Berger', 'Koch', 'Wagner', 'Becker', 'Hoffmann', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Neumann', 'Schwarz', 'Braun', 'Hartmann', 'Marti', 'Egger', 'Bachmann', 'Vogel', 'Roger', 'Rossi', 'Bianchi', 'Costa', 'Silva', 'Novak'];
 
-/** A harmless made-up name like "Quiet Falcon" or "Rusty Otter 42" (always 32 characters or fewer, which is what Steam allows). */
+const pick = <T>(list: readonly T[]): T => list[randomInt(list.length)]!;
+const year = (): string => String(randomInt(88, 100));
+
+/**
+ * A believable profile name, the way people actually name themselves: a first name alone, with an initial or a surname,
+ * a lower-case handle, or a name with a number or birth year. Always 32 characters or fewer (Steam's limit).
+ */
 export function randomName(): string {
-	const name = `${FIRST[randomInt(FIRST.length)]} ${SECOND[randomInt(SECOND.length)]}`;
-	return randomInt(2) === 0 ? name : `${name} ${randomInt(10, 100)}`;
+	const first = pick(FIRST);
+	const last = pick(LAST);
+	const lower = first.toLowerCase();
+	const forms: (() => string)[] = [
+		() => first,
+		() => first,
+		() => `${first} ${last[0]}.`,
+		() => `${first} ${last}`,
+		() => `${first} ${last}`,
+		() => `${lower}_${last.toLowerCase()}`,
+		() => `${lower}.${last.toLowerCase()}`,
+		() => `${lower}${year()}`,
+		() => `${first}${randomInt(2, 100)}`,
+		() => `${lower}_${randomInt(1, 100)}`,
+		() => `${first[0]!.toLowerCase()}${last.toLowerCase()}`,
+		() => `${first} ${last[0]}`
+	];
+	return pick(forms)().slice(0, 32);
 }

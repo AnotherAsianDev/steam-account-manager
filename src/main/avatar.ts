@@ -134,6 +134,15 @@ export class AvatarCache {
 	/** The list asks every second; the disk is only looked at every few minutes per account. */
 	private checkedAt = new Map<string, number>();
 	private onDisk = new Set<string>();
+	/** Counts how often a picture was written, so the window knows when to load it again. */
+	private pics = new Map<string, number>();
+	revision(steamId: string): number {
+		return this.pics.get(steamId) ?? 0;
+	}
+	private wrote(steamId: string): void {
+		this.onDisk.add(steamId);
+		this.pics.set(steamId, this.revision(steamId) + 1);
+	}
 	private profiles: Record<string, Profile> = {};
 	private wants = new Map<string, { image: boolean; bans: boolean }>();
 	/** Bans come from the official API (a key is set); the profile page then no longer decides them. */
@@ -164,6 +173,8 @@ export class AvatarCache {
 					checked: typeof p.checked === 'number' ? p.checked : 0,
 					...(p.unset === true ? { unset: true } : {}),
 					...(p.probed === true && !stale ? { probed: true } : {}),
+					...(p.privacy === 'public' || p.privacy === 'friends' || p.privacy === 'private' ? { privacy: p.privacy } : {}),
+					...(p.privRead === true && !stale ? { privRead: true as const } : {}),
 					...(Array.isArray(p.events) ? { events: p.events.filter((e) => typeof e?.at === 'number' && typeof e?.what === 'string').slice(-EVENTS_MAX) } : {}),
 					...(b && typeof b.vac === 'boolean' && typeof b.trade === 'string' ? { bans: { vac: b.vac, trade: b.trade, limited: b.limited === true, ...(typeof b.vacCount === 'number' ? { vacCount: b.vacCount } : {}), ...(typeof b.gameBans === 'number' ? { gameBans: b.gameBans } : {}), ...(typeof b.community === 'boolean' ? { community: b.community } : {}), ...(typeof b.daysSince === 'number' ? { daysSince: b.daysSince } : {}), ...(b.api ? { api: true as const } : {}) } } : {})
 				};
@@ -239,7 +250,7 @@ export class AvatarCache {
 			// The old picture's address is what a stale answer still carries.
 			exp.staleUrl = p.url ?? '';
 			writeFileAtomic(this.file(steamId), change.picture);
-			this.onDisk.add(steamId);
+			this.wrote(steamId);
 		}
 		this.expected.set(steamId, exp);
 		this.save();
@@ -394,8 +405,8 @@ export class AvatarCache {
 				if (privacy === exp.privacy) delete exp.privacy;
 				else privacy = exp.privacy;
 			}
+			// A page without the field (for example an error page) leaves what is known as it is.
 			if (privacy) next.privacy = privacy;
-			else delete next.privacy;
 			// Steam's XML for an account without a profile has an empty name and says so in the privacy message.
 			if (isProfileUnset(xml)) next.unset = true;
 			else if (/<steamID64>/.test(xml)) delete next.unset;
@@ -418,7 +429,7 @@ export class AvatarCache {
 					if (!res.ok || buf.length === 0 || buf.length > MAX_BYTES) throw new Error('bad image');
 					writeFileAtomic(this.file(steamId), buf);
 					next.url = url;
-					this.onDisk.add(steamId);
+					this.wrote(steamId);
 					changed = true;
 				}
 			}

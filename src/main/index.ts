@@ -360,6 +360,7 @@ function registerIpc(): void {
 				code: generateCode(a.sharedSecret, t),
 				remaining: secondsRemaining(t),
 				hasAvatar: showAvatars && avatars.has(steamId),
+				pic: avatars.revision(steamId),
 				noProfile: avatars.isUnset(steamId),
 				privacy: avatars.privacy(steamId) ?? null,
 				nickname: avatars.nickname(steamId) ?? null,
@@ -399,7 +400,7 @@ function registerIpc(): void {
 	});
 	handle('detail', (steamId: unknown) => {
 		const a = accounts.get(known(steamId))!;
-		return { steamId: a.steamId, name: a.accountName, nickname: avatars.nickname(a.steamId) ?? null, hasRevocation: !!a.revocationCode, hasPassword: accounts.hasPassword(a.steamId), pinned: meta.get(a.steamId).pinned, note: meta.get(a.steamId).note, tags: meta.get(a.steamId).tags, bans: banLabels(avatars.bans(a.steamId)), banNote: banNote(avatars.bans(a.steamId)), banHistory: avatars.history(a.steamId), noProfile: avatars.isUnset(a.steamId), privacy: avatars.privacy(a.steamId) ?? null, sessionDays: accounts.sessionDaysLeft(a.steamId) ?? null };
+		return { steamId: a.steamId, name: a.accountName, nickname: avatars.nickname(a.steamId) ?? null, hasRevocation: !!a.revocationCode, hasPassword: accounts.hasPassword(a.steamId), pinned: meta.get(a.steamId).pinned, note: meta.get(a.steamId).note, tags: meta.get(a.steamId).tags, bans: banLabels(avatars.bans(a.steamId)), banNote: banNote(avatars.bans(a.steamId)), banHistory: avatars.history(a.steamId), noProfile: avatars.isUnset(a.steamId), privacy: avatars.privacy(a.steamId) ?? null, pic: avatars.revision(a.steamId), sessionDays: accounts.sessionDaysLeft(a.steamId) ?? null };
 	});
 	handle('apiKeyState', () => apiKeyState());
 	handle('apiKeySet', async (key: unknown) => {

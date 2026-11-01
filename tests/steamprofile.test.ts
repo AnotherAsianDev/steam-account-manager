@@ -110,3 +110,11 @@ describe('random name', () => {
 		for (let i = 0; i < 300; i++) expect(() => cleanName(randomName())).not.toThrow();
 	});
 });
+
+describe('random name looks like a person', () => {
+	it('varies and never looks like a word list', () => {
+		const names = new Set(Array.from({ length: 200 }, () => randomName()));
+		expect(names.size).toBeGreaterThan(100);
+		for (const n of names) expect(n).toMatch(/^[A-Za-z][A-Za-z0-9._ ]*$/);
+	});
+});

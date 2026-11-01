@@ -7,6 +7,8 @@ interface Row {
 	code: string;
 	remaining: number;
 	hasAvatar: boolean;
+	/** Changes whenever the picture was replaced. */
+	pic: number;
 	noProfile: boolean;
 	privacy: Privacy | null;
 	pinned: boolean;
@@ -137,7 +139,7 @@ declare const api: {
 	avatar(id: string): P<string | null>;
 	copyCode(id: string): P<void>;
 	copyField(id: string, field: string): P<void>;
-	detail(id: string): P<{ steamId: string; name: string; nickname: string | null; hasRevocation: boolean; hasPassword: boolean; pinned: boolean; note: string; tags: string[]; bans: string[]; banNote: string; banHistory: { at: number; what: string }[]; sessionDays: number | null; noProfile: boolean; privacy: Privacy | null }>;
+	detail(id: string): P<{ steamId: string; name: string; nickname: string | null; hasRevocation: boolean; hasPassword: boolean; pinned: boolean; note: string; tags: string[]; bans: string[]; banNote: string; banHistory: { at: number; what: string }[]; sessionDays: number | null; noProfile: boolean; privacy: Privacy | null; pic: number }>;
 	setMeta(id: string, patch: { pinned?: boolean; note?: string; tags?: string[] | string; skipBulk?: boolean }): P<{ pinned: boolean; note: string; tags: string[]; skipBulk: boolean }>;
 	apiKeyState(): P<{ has: boolean; locked: boolean; hint: string }>;
 	apiKeySet(key: string): P<{ has: boolean; locked: boolean; hint: string }>;
@@ -450,6 +452,14 @@ function ago(unix?: number): string {
 	if (s < 3600) return `${Math.floor(s / 60)} min ago`;
 	if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
 	return `${Math.floor(s / 86400)} d ago`;
+}
+
+/** The window keeps pictures it has loaded; when a picture was replaced, the old one is dropped. */
+const avatarRev = new Map<string, number>();
+function noteRevision(id: string, pic: number): void {
+	if (avatarRev.get(id) === pic) return;
+	avatarRev.set(id, pic);
+	avatarImages.delete(id);
 }
 
 async function loadAvatar(id: string, into: HTMLElement): Promise<void> {
@@ -1166,7 +1176,8 @@ async function listScreen(): Promise<void> {
 
 	function updateRow(li: HTMLLIElement, row: Row): void {
 		const slot = li.querySelector<HTMLElement>('.avatar-slot')!;
-		const key = `${row.hasAvatar}|${settings.showAvatars}`;
+		noteRevision(row.steamId, row.pic);
+		const key = `${row.hasAvatar}|${settings.showAvatars}|${row.pic}`;
 		if (slot.dataset['key'] !== key) {
 			slot.dataset['key'] = key;
 			slot.replaceChildren(settings.showAvatars ? avatarBox(row.name, row.steamId, row.hasAvatar, 'sm') : '');
@@ -1926,6 +1937,7 @@ async function detailScreen(id: string): Promise<void> {
 		toast(d.error, true);
 		return goList();
 	}
+	noteRevision(id, d.value.pic);
 	const selected = new Set<string>();
 	let lastSig = '';
 
