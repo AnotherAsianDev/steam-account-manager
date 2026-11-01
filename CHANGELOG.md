@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.2
+
+- A rename, a new picture or a visibility change shows in the app immediately. The app then keeps reading the profile for about two minutes and ignores older answers while Steam still shows the old state, so nothing flips back.
+- "Read Steam profile again" (right-click and account page) now reads that profile right away instead of waiting in the queue behind other accounts, and tells you when it is done.
+- Reads of a profile ask Steam not to answer from a cache.
+
 ## 0.10.1
 
 - After a rename, a new picture or a visibility change, the app reads the profile again by itself (a few seconds apart, for about two minutes, because Steam is slow to show a change) and stops as soon as the change shows. The Accounts page updates without a manual refresh.

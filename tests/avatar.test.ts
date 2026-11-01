@@ -119,3 +119,27 @@ describe('name from the profile page', () => {
 		expect(extractPageName('<span class="actual_persona_name">\u200b </span>')).toBeUndefined();
 	});
 });
+
+describe('a change just made on Steam', () => {
+	const page = (name: string, privacy: string, pic: string) => `<profile><steamID64>${ID}</steamID64><privacyState>${privacy}</privacyState><steamID><![CDATA[${name}]]></steamID><avatarFull><![CDATA[https://avatars.steamstatic.com/${pic}_full.jpg]]></avatarFull></profile>`;
+	it('shows at once and is not undone by an older answer from Steam', async () => {
+		let answer = page('Old', 'public', 'old');
+		vi.stubGlobal('fetch', async (url: string) => (String(url).includes('xml=1') ? new Response(answer) : new Response(Buffer.from([9, 9, 9]))));
+		const updates: number[] = [];
+		const cache = new AvatarCache(mkdtempSync(join(tmpdir(), 'av-')), () => updates.push(1), 'https://example.test/profiles');
+		await cache.readNow(ID);
+		expect([cache.nickname(ID), cache.privacy(ID)]).toEqual(['Old', 'public']);
+		const picture = Buffer.from([1, 2, 3, 4]);
+		cache.applied(ID, { name: 'New', privacy: 'private', picture });
+		expect([cache.nickname(ID), cache.privacy(ID)]).toEqual(['New', 'private']);
+		// Steam still shows the old profile: nothing changes back, the new picture stays.
+		await cache.readNow(ID);
+		expect([cache.nickname(ID), cache.privacy(ID)]).toEqual(['New', 'private']);
+		expect(cache.get(ID)).toContain(picture.toString('base64'));
+		// Steam catches up: its picture replaces ours.
+		answer = page('New', 'private', 'new');
+		await cache.readNow(ID);
+		expect([cache.nickname(ID), cache.privacy(ID)]).toEqual(['New', 'private']);
+		expect(cache.get(ID)).toContain(Buffer.from([9, 9, 9]).toString('base64'));
+	});
+});

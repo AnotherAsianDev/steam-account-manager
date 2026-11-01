@@ -222,31 +222,49 @@ export class AvatarCache {
 		this.checkedAt.delete(steamId);
 	}
 
-	/** Address of the picture on disk (changes when the picture was replaced on Steam). */
-	pictureUrl(steamId: string): string | undefined {
-		return this.profiles[steamId]?.url;
-	}
-
+	/** What was just changed on Steam and what Steam still has to show: older answers meanwhile are ignored. */
+	private expected = new Map<string, { name?: string; privacy?: PrivacyState; staleUrl?: string }>();
 	private following = new Map<string, NodeJS.Timeout>();
+
 	/**
-	 * After a change on Steam: read the profile again at growing intervals until `done` says it shows,
-	 * for about two minutes (Steam is slow to show a change). A newer change replaces an older watch.
+	 * A change that was just made on Steam: it is shown at once, then the profile is read again at growing
+	 * intervals (about two minutes in all, Steam is slow to show a change) while older answers are ignored.
 	 */
-	follow(steamId: string, done: () => boolean): void {
+	applied(steamId: string, change: { name?: string; privacy?: PrivacyState; picture?: Buffer }): void {
+		const p = (this.profiles[steamId] ??= { checked: 0 });
+		const exp = this.expected.get(steamId) ?? {};
+		if (change.name !== undefined) exp.name = p.name = change.name;
+		if (change.privacy !== undefined) exp.privacy = p.privacy = change.privacy;
+		if (change.picture) {
+			// The old picture's address is what a stale answer still carries.
+			exp.staleUrl = p.url ?? '';
+			writeFileAtomic(this.file(steamId), change.picture);
+			this.onDisk.add(steamId);
+		}
+		this.expected.set(steamId, exp);
+		this.save();
+		this.onUpdate();
 		clearTimeout(this.following.get(steamId));
 		const gaps = [3, 5, 8, 12, 15, 20, 25, 30];
 		const step = (i: number): void => {
-			if (i >= gaps.length) return void this.following.delete(steamId);
+			if (i >= gaps.length || !this.expected.has(steamId)) {
+				this.expected.delete(steamId);
+				this.following.delete(steamId);
+				return;
+			}
 			const t = setTimeout(() => {
-				if (done()) return void this.following.delete(steamId);
-				this.forget(steamId);
-				this.ensure(steamId, this.wants.get(steamId) ?? { image: true, bans: true });
-				step(i + 1);
+				void this.readNow(steamId).then(() => step(i + 1));
 			}, gaps[i]! * 1000);
 			t.unref();
 			this.following.set(steamId, t);
 		};
 		step(0);
+	}
+
+	/** Reads this profile right now, ahead of the queue. */
+	async readNow(steamId: string): Promise<void> {
+		this.forget(steamId);
+		await this.download(steamId);
 	}
 
 	/** Public, friends only or private, once Steam has said. */
@@ -347,7 +365,7 @@ export class AvatarCache {
 	private async download(steamId: string): Promise<void> {
 		const want = this.wants.get(steamId) ?? { image: true, bans: true };
 		try {
-			const xml = await fetch(`${this.profileBase}/${steamId}/?xml=1`, { signal: AbortSignal.timeout(10_000) }).then((r) => r.text());
+			const xml = await fetch(`${this.profileBase}/${steamId}/?xml=1&nocache=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(10_000) }).then((r) => r.text());
 			const before = this.profiles[steamId];
 			const next: Profile = { ...(before ?? { checked: 0 }), checked: Date.now() };
 			let name = extractPersonaName(xml);
@@ -363,10 +381,19 @@ export class AvatarCache {
 					if (name) break;
 				}
 			}
+			const exp = this.expected.get(steamId);
+			if (exp?.name !== undefined) {
+				if (name === exp.name) delete exp.name;
+				else name = exp.name;
+			}
 			if (name) next.name = name;
 			next.probed = true;
 			next.privRead = true;
-			const privacy = extractPrivacy(xml);
+			let privacy = extractPrivacy(xml);
+			if (exp?.privacy !== undefined) {
+				if (privacy === exp.privacy) delete exp.privacy;
+				else privacy = exp.privacy;
+			}
 			if (privacy) next.privacy = privacy;
 			else delete next.privacy;
 			// Steam's XML for an account without a profile has an empty name and says so in the privacy message.
@@ -382,7 +409,10 @@ export class AvatarCache {
 				// Steam's default picture only for a profile Steam says does not exist, and never over a picture already saved.
 				const url = extractAvatarUrl(xml) ?? (isProfileUnset(xml) && !existsSync(this.file(steamId)) ? DEFAULT_AVATAR : undefined);
 				if (!url) throw new Error('no avatar');
-				if (next.url !== url || !existsSync(this.file(steamId))) {
+				// Right after a new picture was sent, Steam may still describe the old one.
+				const stale = exp?.staleUrl !== undefined && url === exp.staleUrl;
+				if (exp && !stale) delete exp.staleUrl;
+				if (!stale && (next.url !== url || !existsSync(this.file(steamId)))) {
 					const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
 					const buf = Buffer.from(await res.arrayBuffer());
 					if (!res.ok || buf.length === 0 || buf.length > MAX_BYTES) throw new Error('bad image');
@@ -392,6 +422,7 @@ export class AvatarCache {
 					changed = true;
 				}
 			}
+			if (exp && exp.name === undefined && exp.privacy === undefined && exp.staleUrl === undefined) this.expected.delete(steamId);
 			this.save();
 			if (changed) this.onUpdate();
 		} catch (err) {

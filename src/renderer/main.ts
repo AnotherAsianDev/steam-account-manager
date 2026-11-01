@@ -1013,7 +1013,7 @@ async function listScreen(): Promise<void> {
 			'sep',
 			{ head: 'Keep up to date' },
 			{ label: 'Check confirmations now', run: async () => { const r = await api.refresh(id); toast(r.ok ? 'Checked' : r.error, !r.ok); await refresh(); } },
-			{ label: 'Read Steam profile again', run: async () => { await api.profilesRefresh(id); toast('Reading the Steam profile again'); await refresh(); } },
+			{ label: 'Read Steam profile again', run: async () => { const r = await api.profilesRefresh(id); toast(r.ok ? 'Steam profile read again' : r.error, !r.ok); await refresh(); } },
 			...(row.noProfile ? [{ label: 'Set up Steam profile', run: async () => { const r = await api.profileSetup(id); toast(r.ok ? 'Steam profile set up. Steam takes a minute or two to show it' : r.error, !r.ok); await refresh(); } }] : []),
 			'sep',
 			{ head: 'Change Steam profile' },
@@ -2073,7 +2073,7 @@ async function detailScreen(id: string): Promise<void> {
 				el('section', { class: 'group' }, el('h2', { class: 'todo-title', textContent: 'Steam profile' }),
 					el('p', { class: d.value.noProfile ? 'hint warn' : 'hint', textContent: d.value.noProfile ? 'This account has no Steam Community profile yet. Steam needs one for trading and for the nickname and picture to show. "Set up" does the same as the "Set Up Steam Profile" button on the Steam website.' : `The profile is ${privacyText(d.value.privacy)}. Name, picture and bans come from the public Steam profile. Read it again after a change on Steam.` }),
 					el('div', { class: 'row-actions left' },
-						el('button', { class: 'small', type: 'button', textContent: 'Read profile again', onclick: async () => { await api.profilesRefresh(id); toast('Reading the Steam profile again. This takes a moment'); } }),
+						el('button', { class: 'small', type: 'button', textContent: 'Read profile again', onclick: async (e: Event) => { const b = e.currentTarget as HTMLButtonElement; b.disabled = true; const r = await api.profilesRefresh(id); b.disabled = false; toast(r.ok ? 'Steam profile read again' : r.error, !r.ok); void navigate({ name: 'detail', id }); } }),
 						...profileChanges(id, d.value, () => navigate({ name: 'detail', id })).map((item) => {
 							const b = el('button', { class: 'small', type: 'button', textContent: item.label });
 							let armed = false;

@@ -539,9 +539,9 @@ function registerIpc(): void {
 		if (typeof target !== 'string' || !(target in TARGETS)) throw new UserError('Unknown page');
 		openSteamWindow(id, accounts.get(id)!.accountName, await token(), target, { links });
 	});
-	handle('profilesRefresh', (steamId?: unknown) => {
+	handle('profilesRefresh', async (steamId?: unknown) => {
 		if (steamId === undefined || steamId === null) avatars.refreshAll();
-		else avatars.forget(known(steamId));
+		else await avatars.readNow(known(steamId));
 	});
 	handle('profileSetup', async (steamId: unknown) => {
 		const id = known(steamId);
@@ -556,16 +556,16 @@ function registerIpc(): void {
 	handle('profileRename', async (steamId: unknown, name: unknown) => {
 		const id = known(steamId);
 		const used = await renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id));
-		avatars.follow(id, () => avatars.nickname(id) === used);
+		avatars.applied(id, { name: used });
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile name changed to "${used}"`);
 		return used;
 	});
 	handle('profilePhoto', async (steamId: unknown) => {
 		const id = known(steamId);
 		needsProfile(id);
-		const before = avatars.pictureUrl(id);
-		await uploadAvatar(fetchHttp, id, await cookieOf(id), await randomPhoto());
-		avatars.follow(id, () => avatars.pictureUrl(id) !== before);
+		const image = await randomPhoto();
+		await uploadAvatar(fetchHttp, id, await cookieOf(id), image);
+		avatars.applied(id, { picture: image });
 		log.info('profile', `${accounts.get(id)!.accountName}: new random profile picture uploaded`);
 	});
 	handle('profilePrivacy', async (steamId: unknown, target: unknown) => {
@@ -573,7 +573,7 @@ function registerIpc(): void {
 		if (target !== 'private' && target !== 'public') throw new UserError('Unknown setting');
 		needsProfile(id);
 		await setVisibility(fetchHttp, id, await cookieOf(id), target);
-		avatars.follow(id, () => avatars.privacy(id) === target);
+		avatars.applied(id, { privacy: target });
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set to ${target}`);
 	});
 	// ---- Sending items by trade offer ----
