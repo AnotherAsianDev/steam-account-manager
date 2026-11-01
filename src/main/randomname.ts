@@ -1,33 +1,42 @@
 import { randomInt } from 'node:crypto';
 
-const FIRST = ['Lukas', 'Jonas', 'Noah', 'Leon', 'Luca', 'Elias', 'Finn', 'Tim', 'Nico', 'Marco', 'David', 'Daniel', 'Simon', 'Julian', 'Fabian', 'Dominik', 'Patrick', 'Sven', 'Marc', 'Andre', 'Kevin', 'Alex', 'Max', 'Ben', 'Jan', 'Felix', 'Moritz', 'Oliver', 'Thomas', 'Michael', 'Stefan', 'Reto', 'Pascal', 'Raphael', 'Dario', 'Mattia', 'Enzo', 'Liam', 'Ethan', 'Jack', 'Ryan', 'Tom', 'Chris', 'Sam', 'Adrian', 'Samuel', 'Emil', 'Philipp', 'Robin', 'Yannick',
-	'Emma', 'Mia', 'Lena', 'Anna', 'Laura', 'Sarah', 'Julia', 'Lara', 'Nina', 'Sophie', 'Lea', 'Elena', 'Giulia', 'Chiara', 'Alina', 'Jana', 'Selina', 'Noemi', 'Livia', 'Amelie', 'Hannah', 'Clara', 'Sara', 'Eva', 'Marie', 'Lisa', 'Vanessa', 'Melanie', 'Jessica', 'Katrin'];
-const LAST = ['Meier', 'Keller', 'Weber', 'Huber', 'Schmid', 'Fischer', 'Brunner', 'Baumann', 'Gerber', 'Frei', 'Moser', 'Zimmermann', 'Steiner', 'Roth', 'Graf', 'Widmer', 'Lehmann', 'Berger', 'Koch', 'Wagner', 'Becker', 'Hoffmann', 'Bauer', 'Richter', 'Klein', 'Wolf', 'Neumann', 'Schwarz', 'Braun', 'Hartmann', 'Marti', 'Egger', 'Bachmann', 'Vogel', 'Roger', 'Rossi', 'Bianchi', 'Costa', 'Silva', 'Novak'];
+/** Short first names and pet forms, the part of a nickname people take from their own name. */
+const STEMS = ['Luki', 'Jonny', 'Nico', 'Leo', 'Max', 'Finn', 'Timo', 'Jan', 'Ben', 'Luca', 'Noah', 'Elias', 'Felix', 'Marc', 'Sven', 'Dario', 'Enzo', 'Kevin', 'Alex', 'Tim', 'Chris', 'Sam', 'Robin', 'Dani', 'Domi', 'Fabi', 'Pascal', 'Reto', 'Mike', 'Tom', 'Eli', 'Lukas', 'Jonas', 'Moritz', 'Jannik', 'Kilian', 'Mattia', 'Raffi', 'Yannik', 'Simi',
+	'Mia', 'Lena', 'Nina', 'Lea', 'Emma', 'Lara', 'Sophie', 'Jana', 'Alina', 'Noemi', 'Liv', 'Zoe', 'Lisa', 'Sara', 'Ella', 'Nele', 'Chiara', 'Selina'];
+/** Words that gamers like in a nickname. */
+const WORDS = ['Frost', 'Nova', 'Blaze', 'Echo', 'Rogue', 'Viper', 'Pixel', 'Turbo', 'Ghost', 'Storm', 'Vex', 'Zeno', 'Kilo', 'Orbit', 'Rex', 'Shadow', 'Wolf', 'Fox', 'Raven', 'Tiger', 'Hawk', 'Drift', 'Spark', 'Onyx', 'Cobra', 'Lynx', 'Atlas', 'Comet', 'Ember', 'Falcon', 'Hunter', 'Ninja', 'Sniper', 'Phantom', 'Titan', 'Jester', 'Bandit', 'Smoke', 'Rush', 'Flash', 'Cyber', 'Neon', 'Dusty', 'Salty', 'Lazy', 'Sleepy', 'Moody', 'Tilted', 'Cozy', 'Chill'];
 
 const pick = <T>(list: readonly T[]): T => list[randomInt(list.length)]!;
+const num = (): string => (randomInt(3) === 0 ? String(randomInt(1, 10)) : String(randomInt(0, 100)).padStart(2, '0'));
 const year = (): string => String(randomInt(88, 100));
+const letter = (): string => String.fromCharCode(65 + randomInt(26));
 
 /**
- * A believable profile name, the way people actually name themselves: a first name alone, with an initial or a surname,
- * a lower-case handle, or a name with a number or birth year. Always 32 characters or fewer (Steam's limit).
+ * A believable Steam nickname, the way people actually pick them: their own name with a number, a letter or a
+ * gamer word, or just a gamer word. Always 32 characters or fewer (Steam's limit).
  */
 export function randomName(): string {
-	const first = pick(FIRST);
-	const last = pick(LAST);
-	const lower = first.toLowerCase();
+	const stem = pick(STEMS);
+	const word = pick(WORDS);
 	const forms: (() => string)[] = [
-		() => first,
-		() => first,
-		() => `${first} ${last[0]}.`,
-		() => `${first} ${last}`,
-		() => `${first} ${last}`,
-		() => `${lower}_${last.toLowerCase()}`,
-		() => `${lower}.${last.toLowerCase()}`,
-		() => `${lower}${year()}`,
-		() => `${first}${randomInt(2, 100)}`,
-		() => `${lower}_${randomInt(1, 100)}`,
-		() => `${first[0]!.toLowerCase()}${last.toLowerCase()}`,
-		() => `${first} ${last[0]}`
+		() => `${stem}${num()}`,
+		() => `${stem}${year()}`,
+		() => `${stem.toLowerCase()}_${num()}`,
+		() => `${stem}${letter()}`,
+		() => `x${stem}`,
+		() => `${stem}x`,
+		() => `${pick(['its', 'itz', 'i', 'mr', 'the'])}${stem.toLowerCase()}`,
+		() => `${stem}${stem.slice(-1).toLowerCase()}`,
+		() => `${word}${stem}`,
+		() => `${stem}${word}`,
+		() => `${stem.toLowerCase()}_${word.toLowerCase()}`,
+		() => `${word}${num()}`,
+		() => `The${pick(WORDS.slice(0, 40))}`,
+		() => `${word}${word.slice(-1).toLowerCase()}`,
+		() => `${stem.toLowerCase()}plays`,
+		() => `${word}_${stem.toLowerCase()}`,
+		() => stem,
+		() => word
 	];
 	return pick(forms)().slice(0, 32);
 }

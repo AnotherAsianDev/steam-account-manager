@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.4
+
+- Random names are nicknames again, the kind people really use on Steam: "Nico99", "FrostLuca", "itsmax", "Maxx", "TheViper", "lena_07".
+
 ## 0.10.3
 
 - The private-profile icon (and the saved visibility) is now remembered across restarts. It was saved but never loaded again, so every start had to read it from Steam first. A page from Steam without a visibility no longer wipes what is known.

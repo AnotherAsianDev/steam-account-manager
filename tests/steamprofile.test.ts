@@ -111,10 +111,10 @@ describe('random name', () => {
 	});
 });
 
-describe('random name looks like a person', () => {
-	it('varies and never looks like a word list', () => {
+describe('random name looks like a nickname', () => {
+	it('varies, stays short and uses only plain characters', () => {
 		const names = new Set(Array.from({ length: 200 }, () => randomName()));
 		expect(names.size).toBeGreaterThan(100);
-		for (const n of names) expect(n).toMatch(/^[A-Za-z][A-Za-z0-9._ ]*$/);
+		for (const n of names) { expect(n).toMatch(/^[A-Za-z][A-Za-z0-9_]*$/); expect(n.length).toBeLessThanOrEqual(20); }
 	});
 });
