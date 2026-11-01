@@ -9,7 +9,7 @@ import { log } from './log';
  * One request to the GitHub API each time the app starts (and on "Check now"), only when the setting is on.
  */
 
-export const REPO = 'AnotherAsianDev/steam-authenticator';
+export const REPO = 'AnotherAsianDev/steam-account-manager';
 const API = `https://api.github.com/repos/${REPO}/releases/latest`;
 
 export interface Update {
@@ -76,7 +76,7 @@ export class UpdateChecker {
 	async check(strict = false): Promise<Update | undefined> {
 		let state = this.load();
 		try {
-			const res = await this.fetcher(API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'steam-authenticator-update-check' }, signal: AbortSignal.timeout(8000) });
+			const res = await this.fetcher(API, { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'steam-account-manager-update-check' }, signal: AbortSignal.timeout(8000) });
 			if (res.ok) {
 				const latest = releaseFromReply(await res.json());
 				state = { checkedAt: this.now(), ...(latest ? { latest } : {}) };

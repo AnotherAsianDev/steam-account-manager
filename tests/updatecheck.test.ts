@@ -16,7 +16,7 @@ describe('versions', () => {
 		expect(isNewer('garbage', '0.4.2')).toBe(false);
 	});
 	it('builds the page address itself and skips drafts and prereleases', () => {
-		expect(releaseFromReply({ tag_name: 'v0.5.0', html_url: 'https://evil.example/' })).toEqual({ version: '0.5.0', url: 'https://github.com/AnotherAsianDev/steam-authenticator/releases/tag/v0.5.0' });
+		expect(releaseFromReply({ tag_name: 'v0.5.0', html_url: 'https://evil.example/' })).toEqual({ version: '0.5.0', url: 'https://github.com/AnotherAsianDev/steam-account-manager/releases/tag/v0.5.0' });
 		expect(releaseFromReply({ tag_name: 'v0.5.0', prerelease: true })).toBeUndefined();
 		expect(releaseFromReply({ tag_name: 'v0.5.0', draft: true })).toBeUndefined();
 		expect(releaseFromReply({ tag_name: '../../x' })).toBeUndefined();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.1
+
+- The update check and links now point at the renamed repository `AnotherAsianDev/steam-account-manager`.
+
 ## 0.12.0
 
 - The app is now called Steam Account Manager: window title, sidebar, lock screen, `SteamAccountManager.exe` and the release zip (`SteamAccountManager-vX-win-x64.zip`). The launcher was rebuilt for the new name. maFiles and data are untouched; copy the new folder over the old one (or move `maFiles` and `data` into it) and delete the old `Authenticator.exe`.
