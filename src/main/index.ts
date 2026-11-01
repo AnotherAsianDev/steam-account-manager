@@ -556,15 +556,16 @@ function registerIpc(): void {
 	handle('profileRename', async (steamId: unknown, name: unknown) => {
 		const id = known(steamId);
 		const used = await renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id));
-		avatars.forget(id);
+		avatars.follow(id, () => avatars.nickname(id) === used);
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile name changed to "${used}"`);
 		return used;
 	});
 	handle('profilePhoto', async (steamId: unknown) => {
 		const id = known(steamId);
 		needsProfile(id);
+		const before = avatars.pictureUrl(id);
 		await uploadAvatar(fetchHttp, id, await cookieOf(id), await randomPhoto());
-		avatars.forget(id);
+		avatars.follow(id, () => avatars.pictureUrl(id) !== before);
 		log.info('profile', `${accounts.get(id)!.accountName}: new random profile picture uploaded`);
 	});
 	handle('profilePrivacy', async (steamId: unknown, target: unknown) => {
@@ -572,7 +573,7 @@ function registerIpc(): void {
 		if (target !== 'private' && target !== 'public') throw new UserError('Unknown setting');
 		needsProfile(id);
 		await setVisibility(fetchHttp, id, await cookieOf(id), target);
-		avatars.forget(id);
+		avatars.follow(id, () => avatars.privacy(id) === target);
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set to ${target}`);
 	});
 	// ---- Sending items by trade offer ----

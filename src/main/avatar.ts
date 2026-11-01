@@ -222,6 +222,33 @@ export class AvatarCache {
 		this.checkedAt.delete(steamId);
 	}
 
+	/** Address of the picture on disk (changes when the picture was replaced on Steam). */
+	pictureUrl(steamId: string): string | undefined {
+		return this.profiles[steamId]?.url;
+	}
+
+	private following = new Map<string, NodeJS.Timeout>();
+	/**
+	 * After a change on Steam: read the profile again at growing intervals until `done` says it shows,
+	 * for about two minutes (Steam is slow to show a change). A newer change replaces an older watch.
+	 */
+	follow(steamId: string, done: () => boolean): void {
+		clearTimeout(this.following.get(steamId));
+		const gaps = [3, 5, 8, 12, 15, 20, 25, 30];
+		const step = (i: number): void => {
+			if (i >= gaps.length) return void this.following.delete(steamId);
+			const t = setTimeout(() => {
+				if (done()) return void this.following.delete(steamId);
+				this.forget(steamId);
+				this.ensure(steamId, this.wants.get(steamId) ?? { image: true, bans: true });
+				step(i + 1);
+			}, gaps[i]! * 1000);
+			t.unref();
+			this.following.set(steamId, t);
+		};
+		step(0);
+	}
+
 	/** Public, friends only or private, once Steam has said. */
 	privacy(steamId: string): PrivacyState | undefined {
 		return this.profiles[steamId]?.privacy;

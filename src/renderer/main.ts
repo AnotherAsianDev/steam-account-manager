@@ -266,6 +266,7 @@ const ICONS: Record<string, string> = {
 	community: '<path d="M4 5h16v11H9l-5 4z"/><path d="m9.5 8.5 5 4m0-4-5 4"/>',
 	trade: '<path d="M4 8h14l-3-3M20 16H6l3 3"/><path d="m4 4 16 16"/>',
 	probation: '<path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9"/>',
+	eyeoff: '<path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c5 0 8.5 4 9.5 6a14 14 0 0 1-2.8 3.5M6.6 7.5C4.7 8.9 3.4 10.7 2.5 12c1 2 4.5 6 9.5 6 1.4 0 2.7-.3 3.9-.8"/><path d="M9.9 10a3 3 0 0 0 4.1 4.1"/>',
 	noprofile: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" stroke-dasharray="2.5 2.5"/>',
 	note: '<path d="M5 4h14v12l-5 5H5z"/><path d="M14 21v-5h5M8 9h8M8 13h4"/>',
 	ban: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
@@ -862,6 +863,12 @@ function drawFlags(li: HTMLElement, row: Row): void {
 	box.replaceChildren(...nodes);
 }
 
+/** The small crossed-out eye next to the name of an account whose Steam profile is private. */
+function privMark(): HTMLElement {
+	const m = el('span', { class: 'priv', title: 'This Steam profile is private' });
+	m.innerHTML = svgIcon('eyeoff', 13);
+	return m;
+}
 const privacyText = (p: Privacy | null): string => (p === 'public' ? 'public' : p === 'friends' ? 'friends only' : p === 'private' ? 'private' : 'not known yet');
 /** Public is made private; anything else (private, friends only, unknown) is made public. Unknown goes private, the safer direction. */
 const flipTarget = (p: Privacy | null): 'private' | 'public' => (p === 'private' || p === 'friends' ? 'public' : 'private');
@@ -1148,7 +1155,7 @@ async function listScreen(): Promise<void> {
 		} });
 		li.append(
 			el('span', { class: 'avatar-slot' }),
-			el('span', { class: 'who' }, el('span', { class: 'name-line' }, profileLink(row.steamId, row.name, 'name'), el('span', { class: 'status' })), el('span', { class: 'sid' })),
+			el('span', { class: 'who' }, el('span', { class: 'name-line' }, profileLink(row.steamId, row.name, 'name'), el('span', { class: 'priv', hidden: true }), el('span', { class: 'status' })), el('span', { class: 'sid' })),
 			el('span', { class: 'flags' }),
 			code,
 			star,
@@ -1166,6 +1173,9 @@ async function listScreen(): Promise<void> {
 			slot.hidden = !settings.showAvatars;
 		}
 		li.querySelector('.name')!.textContent = accountLabel(row.name, row.nickname);
+		const priv = li.querySelector<HTMLElement>('.priv')!;
+		priv.hidden = row.privacy !== 'private';
+		if (!priv.hidden && !priv.firstChild) priv.replaceWith(privMark());
 		li.dataset['name'] = `${row.name} ${row.nickname ?? ''} ${row.note} ${row.tags.join(' ')}`.toLowerCase();
 		li.dataset['pinned'] = row.pinned ? '1' : '0';
 		const starBtn = li.querySelector<HTMLButtonElement>('.star')!;
@@ -1977,7 +1987,7 @@ async function detailScreen(id: string): Promise<void> {
 		: settings.showSteamId
 			? el('button', { class: 'sidcopy', type: 'button', title: 'Copy SteamID64', textContent: sub, onclick: async () => { await api.copyField(id, 'steamId'); toast('SteamID64 copied'); } })
 			: el('span', { class: 'sid shown', textContent: sub });
-	const profile = el('div', { class: 'profile' }, avatarBox(d.value.name, id, true, 'lg'), el('div', { class: 'who' }, profileLink(id, accountLabel(d.value.name, d.value.nickname), 'name big'), sidLine));
+	const profile = el('div', { class: 'profile' }, avatarBox(d.value.name, id, true, 'lg'), el('div', { class: 'who' }, el('div', { class: 'name-line' }, profileLink(id, accountLabel(d.value.name, d.value.nickname), 'name big'), ...(d.value.privacy === 'private' ? [privMark()] : [])), sidLine));
 
 	const noteInput = el('input', { type: 'text', class: 'search', maxLength: 120, placeholder: 'A short note, for example "trade alt"', value: d.value.note, ariaLabel: 'Note', spellcheck: false });
 	let pinned = d.value.pinned;

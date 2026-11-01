@@ -739,3 +739,7 @@ select { appearance: none; padding-right: 30px; background-image: url("data:imag
 /* Name field with a "Random" button next to it. */
 .dlg-fill { display: flex; gap: 8px; }
 .dlg-fill input { flex: 1; min-width: 0; }
+
+/* Crossed-out eye next to the name of a private profile. */
+.priv { display: inline-flex; flex: none; color: var(--muted); }
+.priv[hidden] { display: none; }
