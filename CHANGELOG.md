@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0
+
+- New Select button on the Accounts page: tick accounts (or "All shown"), then Make private, Make public, Random name or Random picture for all of them. A window lists the accounts first. Accounts without a Steam profile are left out of the actions that need one.
+- Made for Steam's rate limit: one account at a time, 5 to 9 seconds apart, and every profile change in the app (also single ones) is spaced at least 2.5 seconds from the previous one. If Steam says to slow down, the run stops and tells how many were done. A Stop button ends a run early.
+- Random names are real-looking nicknames and contain no real names: "SilentFox", "Frost07", "storm_lynx", "Fr0st", "TheViper".
+
 ## 0.10.4
 
 - Random names are nicknames again, the kind people really use on Steam: "Nico99", "FrostLuca", "itsmax", "Maxx", "TheViper", "lena_07".

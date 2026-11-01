@@ -546,17 +546,24 @@ function registerIpc(): void {
 	});
 	handle('profileSetup', async (steamId: unknown) => {
 		const id = known(steamId);
-		await setupProfile(fetchHttp, id, await cookieOf(id));
+		await gated(async () => setupProfile(fetchHttp, id, await cookieOf(id)));
 		avatars.forget(id);
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set up`);
 	});
+	/** Writes to Steam profiles go one at a time with a pause in between, so a bulk run or a quick double click cannot trip Steam's rate limit. */
+	let profileGate: Promise<unknown> = Promise.resolve();
+	const gated = <T>(fn: () => Promise<T>): Promise<T> => {
+		const run = profileGate.then(fn);
+		profileGate = run.catch(() => undefined).then(() => new Promise((r) => setTimeout(r, 2500)));
+		return run;
+	};
 	const needsProfile = (id: string): void => {
 		if (avatars.isUnset(id)) throw new UserError('This account has no Steam profile yet. Set it up first');
 	};
 	handle('profileRandomName', () => randomName());
 	handle('profileRename', async (steamId: unknown, name: unknown) => {
 		const id = known(steamId);
-		const used = await renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id));
+		const used = await gated(async () => renameProfile(fetchHttp, id, await cookieOf(id), str(name, 'name'), avatars.isUnset(id)));
 		avatars.applied(id, { name: used });
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile name changed to "${used}"`);
 		return used;
@@ -565,7 +572,7 @@ function registerIpc(): void {
 		const id = known(steamId);
 		needsProfile(id);
 		const image = await randomPhoto();
-		await uploadAvatar(fetchHttp, id, await cookieOf(id), image);
+		await gated(async () => uploadAvatar(fetchHttp, id, await cookieOf(id), image));
 		avatars.applied(id, { picture: image });
 		log.info('profile', `${accounts.get(id)!.accountName}: new random profile picture uploaded`);
 	});
@@ -573,7 +580,7 @@ function registerIpc(): void {
 		const id = known(steamId);
 		if (target !== 'private' && target !== 'public') throw new UserError('Unknown setting');
 		needsProfile(id);
-		await setVisibility(fetchHttp, id, await cookieOf(id), target);
+		await gated(async () => setVisibility(fetchHttp, id, await cookieOf(id), target));
 		avatars.applied(id, { privacy: target });
 		log.info('profile', `${accounts.get(id)!.accountName}: Steam profile set to ${target}`);
 	});

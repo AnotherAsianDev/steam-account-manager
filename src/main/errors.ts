@@ -3,3 +3,6 @@ export class UserError extends Error {}
 
 /** Steam could not be reached. Not the user's fault, and never a reason to blame a saved password. */
 export class NetworkError extends UserError {}
+
+/** Steam says to slow down (HTTP 429). A bulk run stops on this instead of pushing on. */
+export class RateLimited extends UserError {}

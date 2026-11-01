@@ -789,7 +789,7 @@ interface DialogField {
 	plain?: { value: string; max: number; fill?: { label: string; get: () => Promise<string | undefined> } };
 }
 /** A small form in a window of its own. `run` returns an error to show, or nothing to close. */
-function dialog(title: string, text: string, fields: DialogField[], submit: string, run: (v: Record<string, string>) => Promise<string | undefined>, list: string[] = []): void {
+function dialog(title: string, text: string, fields: DialogField[], submit: string, run: (v: Record<string, string>) => Promise<string | undefined>, list: string[] = [], plainList = false): void {
 	document.querySelector('.modal')?.remove();
 	const inputs = fields.map((f) => el('input', { type: f.plain ? 'text' : 'password', autocomplete: 'off', spellcheck: false, placeholder: f.label, ariaLabel: f.label, ...(f.plain ? { value: f.plain.value, maxLength: f.plain.max } : {}), ...(f.numeric ? { inputMode: 'numeric' as const } : {}) }));
 	const shown = fields.map((f, i) => {
@@ -811,7 +811,7 @@ function dialog(title: string, text: string, fields: DialogField[], submit: stri
 		overlay.remove();
 		document.removeEventListener('keydown', onKey);
 	};
-	const form = el('form', { class: 'signin' }, el('h1', { textContent: title }), el('p', { class: 'hint', textContent: text }), ...(list.length ? [el('ul', { class: 'dlg-list' }, ...list.map((n) => el('li', { textContent: n })))] : []), ...shown, err, el('div', { class: 'row-actions' }, el('button', { class: 'small', type: 'button', textContent: 'Cancel', onclick: close }), btn));
+	const form = el('form', { class: 'signin' }, el('h1', { textContent: title }), el('p', { class: 'hint', textContent: text }), ...(list.length ? [el('ul', { class: plainList ? 'dlg-list plain' : 'dlg-list' }, ...list.map((n) => el('li', { textContent: n })))] : []), ...shown, err, el('div', { class: 'row-actions' }, el('button', { class: 'small', type: 'button', textContent: 'Cancel', onclick: close }), btn));
 	const overlay = el('div', { class: 'modal' }, el('div', { class: 'lock-card left' }, form));
 	const onKey = (e: KeyboardEvent): void => {
 		if (e.key === 'Escape') close();
@@ -907,8 +907,37 @@ const profileChanges = (id: string, current: { noProfile: boolean; privacy: Priv
 let profileRun: { n: number; total: number } | null = null;
 const setupText = (): string => (profileRun ? `Setting up ${profileRun.n} of ${profileRun.total}…` : '');
 
+/** A bulk change of Steam profiles in progress. Kept outside the screen so it survives redraws and leaving the list. */
+let bulkRun: { text: string; n: number; total: number; stop: boolean } | null = null;
+let bulkRedraw: (() => void) | null = null;
+interface BulkAction {
+	label: string;
+	/** Shown while it runs, then "n of total". */
+	progress: string;
+	/** Needs a Steam profile that is already set up. */
+	needsProfile: boolean;
+	note: string;
+	/** Returns the reason it failed, or nothing. */
+	run: (id: string) => Promise<string | undefined>;
+}
+const failText = (r: { ok: boolean; error?: string }): string | undefined => (r.ok ? undefined : r.error);
+const BULK: BulkAction[] = [
+	{ label: 'Make private', progress: 'Making private', needsProfile: true, note: 'The profile, inventory, games and friends list become private.', run: async (id) => failText(await api.profilePrivacy(id, 'private')) },
+	{ label: 'Make public', progress: 'Making public', needsProfile: true, note: 'The profile opens up for everyone. What is under it (inventory, games, friends) stays as it is.', run: async (id) => failText(await api.profilePrivacy(id, 'public')) },
+	{ label: 'Random name', progress: 'Changing names', needsProfile: false, note: 'Every account gets a different nickname. Steam keeps a list of earlier names that others can see.', run: async (id) => {
+		const n = await api.profileRandomName();
+		return n.ok ? failText(await api.profileRename(id, n.value)) : n.error;
+	} },
+	{ label: 'Random picture', progress: 'Changing pictures', needsProfile: true, note: 'Every account gets a different random photo from the web.', run: async (id) => failText(await api.profilePhoto(id)) }
+];
+/** Steam is asked for one account at a time with a pause of 5 to 9 seconds between, and the run stops when Steam says to slow down. */
+const bulkPause = (): number => 5000 + Math.random() * 4000;
+
 async function listScreen(): Promise<void> {
 	const list = el('ul', { class: 'list' });
+	/** Selection mode: tick accounts, then change their Steam profiles together. */
+	let selecting = bulkRun !== null;
+	const picked = new Set<string>();
 	const empty = el(
 		'div',
 		{ class: 'center empty', hidden: true },
@@ -922,7 +951,7 @@ async function listScreen(): Promise<void> {
 		'header',
 		{},
 		el('h1', { class: 'title', textContent: 'Accounts' }),
-		el('div', { class: 'actions' }, iconButton('Read all Steam profiles again (names, pictures, bans)', '↻', () => { void api.profilesRefresh().then(() => { toast('Reading the Steam profiles again. This takes a moment'); void refreshView(); }); }))
+		el('div', { class: 'actions' }, el('button', { class: 'small', type: 'button', textContent: 'Select', title: 'Choose accounts to change their Steam profiles together', onclick: () => setSelecting(!selecting) }), iconButton('Read all Steam profiles again (names, pictures, bans)', '↻', () => { void api.profilesRefresh().then(() => { toast('Reading the Steam profiles again. This takes a moment'); void refreshView(); }); }))
 	);
 	const strip = progressStrip();
 	const search = el('input', { type: 'text', class: 'search', placeholder: 'Filter accounts', value: query, ariaLabel: 'Filter accounts', spellcheck: false });
@@ -1094,6 +1123,95 @@ async function listScreen(): Promise<void> {
 			el('div', { class: 'ov-chips' }, ...setupChip, ...(banned ? [el('span', { class: 'ov-chip warn', textContent: `${banned} banned`, title: lastRows.filter((r) => r.bans.length).map((r) => `${r.name}: ${r.bans.join(', ')}`).join('\n') })] : []), ...(chips.length ? chips : [el('span', { class: 'ov-chip good', textContent: 'Everything is complete' })]))
 		);
 	}
+	const bar = el('div', { class: 'bulk-bar', role: 'status', hidden: true });
+	function setSelecting(on: boolean): void {
+		selecting = on;
+		if (!on) picked.clear();
+		list.classList.toggle('selecting', on);
+		list.querySelectorAll('li.picked').forEach((li) => li.classList.remove('picked'));
+		drawBar();
+	}
+	function selectShown(): void {
+		list.querySelectorAll<HTMLLIElement>('li.row:not([hidden])').forEach((li) => {
+			const id = li.dataset['id']!;
+			if (lastRows.find((r) => r.steamId === id)?.skipBulk) return;
+			picked.add(id);
+			li.classList.add('picked');
+		});
+		drawBar();
+	}
+	function clearPicked(): void {
+		picked.clear();
+		list.querySelectorAll('li.picked').forEach((li) => li.classList.remove('picked'));
+		drawBar();
+	}
+	function drawBar(): void {
+		bar.hidden = !selecting;
+		if (!selecting) return;
+		if (bulkRun) {
+			const run = bulkRun;
+			const fill = el('i');
+			fill.style.setProperty('width', `${Math.round((run.n / run.total) * 100)}%`);
+			bar.replaceChildren(
+				el('span', { class: 'bulk-count', textContent: `${run.text}: ${run.n} of ${run.total}…` }),
+				el('span', { class: 'bulk-line' }, fill),
+				el('button', { class: 'small', type: 'button', textContent: run.stop ? 'Stopping…' : 'Stop', disabled: run.stop, onclick: () => { run.stop = true; drawBar(); } }));
+			return;
+		}
+		const n = picked.size;
+		bar.replaceChildren(
+			el('span', { class: 'bulk-count', textContent: n ? `${n} selected` : 'Click accounts to select them' }),
+			el('button', { class: 'small', type: 'button', textContent: 'All shown', onclick: selectShown }),
+			el('button', { class: 'small', type: 'button', textContent: 'None', disabled: n === 0, onclick: clearPicked }),
+			el('span', { class: 'bulk-sep' }),
+			...BULK.map((a) => el('button', { class: 'small primary', type: 'button', textContent: a.label, disabled: n === 0, onclick: () => confirmBulk(a) })),
+			el('button', { class: 'small', type: 'button', textContent: 'Done', onclick: () => setSelecting(false) }));
+	}
+	function confirmBulk(a: BulkAction): void {
+		const chosen = lastRows.filter((r) => picked.has(r.steamId));
+		const todo = a.needsProfile ? chosen.filter((r) => !r.noProfile) : chosen;
+		const skipped = chosen.length - todo.length;
+		if (todo.length === 0) return toast('None of the selected accounts has a Steam profile yet. Set those up first', true);
+		const minutes = Math.max(1, Math.round((todo.length * 8) / 60));
+		dialog(`${a.label}: ${todo.length} account${todo.length === 1 ? '' : 's'}`, `${a.note} The app does one account at a time with a pause of a few seconds between, about ${minutes} minute${minutes === 1 ? '' : 's'} in all, so Steam does not block it. It stops by itself if Steam asks to slow down.${skipped ? ` ${skipped} without a Steam profile ${skipped === 1 ? 'is' : 'are'} left out.` : ''}`, [], a.label, async () => {
+			void runBulk(a, todo);
+			return undefined;
+		}, todo.map((r) => accountLabel(r.name, r.nickname)), true);
+	}
+	async function runBulk(a: BulkAction, todo: Row[]): Promise<void> {
+		const run = { text: a.progress, n: 0, total: todo.length, stop: false };
+		bulkRun = run;
+		bulkRedraw = drawBar;
+		let done = 0;
+		let limited = false;
+		const failed: string[] = [];
+		for (const [i, r] of todo.entries()) {
+			if (run.stop) break;
+			run.n = i + 1;
+			bulkRedraw?.();
+			const err = await a.run(r.steamId);
+			if (!err) done++;
+			else {
+				failed.push(`${accountLabel(r.name, r.nickname)}: ${err}`);
+				if (/rate-limiting/i.test(err)) {
+					limited = true;
+					break;
+				}
+			}
+			if (i < todo.length - 1 && !run.stop) await sleep(bulkPause());
+		}
+		bulkRun = null;
+		picked.clear();
+		const left = todo.length - done - failed.length;
+		const bits = [`${a.label}: ${done} of ${todo.length} done.`];
+		if (limited) bits.push(`Steam asked to slow down, so ${left + 1} were left. Try again in a few minutes.`);
+		else if (run.stop && left) bits.push(`Stopped, ${left} left.`);
+		if (failed.length && !limited) bits.push(`${failed.length} failed. ${failed[0]}`);
+		else if (limited && failed.length > 1) bits.push(failed[0]!);
+		toast(bits.join(' '), failed.length > 0);
+		bulkRedraw?.();
+		void refreshView();
+	}
 	const keyBanner = el('div', { class: 'key-banner', role: 'status', hidden: true });
 	if (settings.checkBans && !settings.hideKeyHint) {
 		void api.apiKeyState().then((k) => {
@@ -1107,7 +1225,9 @@ async function listScreen(): Promise<void> {
 					el('button', { class: 'small primary', type: 'button', textContent: 'Add key', onclick: () => { settingsTab = 'bans'; void navigate({ name: 'settings' }).then(() => document.querySelector<HTMLElement>('.key-row input')?.focus()); } })));
 		});
 	}
-	show(header, strip.node, el('main', {}, keyBanner, overview, filterBar, list, none, empty));
+	list.classList.toggle('selecting', selecting);
+	drawBar();
+	show(header, strip.node, el('main', {}, keyBanner, overview, filterBar, list, none, empty, bar));
 
 	async function doImport(): Promise<void> {
 		const r = await api.import();
@@ -1163,7 +1283,14 @@ async function listScreen(): Promise<void> {
 			if (!r.ok) return toast(r.error, true);
 			await refresh();
 		} });
+		li.addEventListener('click', () => {
+			if (!selecting) return;
+			if (!picked.delete(row.steamId)) picked.add(row.steamId);
+			li.classList.toggle('picked', picked.has(row.steamId));
+			drawBar();
+		});
 		li.append(
+			el('span', { class: 'pick', ariaHidden: 'true' }),
 			el('span', { class: 'avatar-slot' }),
 			el('span', { class: 'who' }, el('span', { class: 'name-line' }, profileLink(row.steamId, row.name, 'name'), el('span', { class: 'priv', hidden: true }), el('span', { class: 'status' })), el('span', { class: 'sid' })),
 			el('span', { class: 'flags' }),
@@ -1195,6 +1322,7 @@ async function listScreen(): Promise<void> {
 		starBtn.title = row.pinned ? 'Unpin' : 'Pin to the top';
 		starBtn.ariaLabel = `${row.pinned ? 'Unpin' : 'Pin'} ${row.name}`;
 		li.classList.toggle('banned', row.bans.length > 0);
+		li.classList.toggle('picked', picked.has(row.steamId));
 		li.dataset['tags'] = row.tags.join('\n');
 		li.dataset['state'] = row.state;
 		li.dataset['pending'] = String(row.pending ?? 0);

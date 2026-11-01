@@ -33,6 +33,10 @@ A lean desktop Steam Guard authenticator for Windows. Plain maFiles next to the 
 <td width="50%"><img src="docs/screenshots/offers.png" alt="Open offers"><br><sub>Open offers: see and cancel what nobody accepted yet</sub></td>
 <td width="50%"><img src="docs/screenshots/overview.png" alt="Overview"><br><sub>Overview: tradable and locked items of every account</sub></td>
 </tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/select.png" alt="Select accounts"><br><sub>Select: tick accounts and change their Steam profiles together</sub></td>
+<td width="50%"></td>
+</tr>
 </table>
 
 *Screenshots use made-up accounts.*
@@ -54,7 +58,8 @@ Minimal desktop Steam Guard authenticator (Electron + TypeScript, no UI framewor
   A refresh token is kept in `sessions.json` (plain text).
 - **Copy** username, password (if saved), shared secret, identity secret, revocation code, SteamID64.
 - **Profile pictures** from the public profile (no API key), at most once a week per account.
-- **Steam profile changes** from the right-click menu or the account page: show whether the profile is public, friends only or private and switch it between private and public, change the profile name (typed or random), set a random profile picture from the web. These use the same web calls the Steam website makes with the saved sign-in, so Steam can change or refuse them; a refusal is shown in plain words.
+- **Steam profile changes** from the right-click menu or the account page: show whether the profile is public, friends only or private (a crossed-out eye marks private ones) and switch it between private and public, change the profile name (typed or a random nickname), set a random profile picture from the web. Changes show in the app at once and are confirmed by re-reading the profile for about two minutes. These use the same web calls the Steam website makes with the saved sign-in, so Steam can change or refuse them; a refusal is shown in plain words.
+- **Select and change many at once:** the Select button on the Accounts page lets you tick accounts (or take all shown) and make them private or public, give them random names or random pictures. It works one account at a time with a pause of 5 to 9 seconds, shows progress with a Stop button, and stops by itself when Steam asks to slow down.
 - **Trades tab, open offers:** see offers that nobody accepted yet, per account or all at once, and cancel them.
 - **Trades tab, overview:** how many tradable and locked items every account holds in a game, with a total.
 - **Backup:** one encrypted file with all maFiles, saved passwords, notes and tags (Settings, Import and updates). Restoring only adds missing accounts.

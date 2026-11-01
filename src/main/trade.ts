@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { UserError } from './errors';
+import { RateLimited, UserError } from './errors';
 import { log } from './log';
 
 /**
@@ -109,7 +109,7 @@ export function checkStatus(status: number, what: string): void {
 		log.warn('trade', `Steam answered HTTP ${status} for ${what}`);
 		throw new UserError(`Steam refused ${what} (HTTP ${status}). Signing in again on the account page can help. If it keeps happening, Steam does not accept this account's session for this step`);
 	}
-	if (status === 429) throw new UserError('Steam is rate-limiting requests. Wait a few minutes and try again');
+	if (status === 429) throw new RateLimited('Steam is rate-limiting requests. Wait a few minutes and try again');
 	if (status >= 400) throw new UserError(`Steam answered HTTP ${status}`);
 }
 

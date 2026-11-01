@@ -743,3 +743,20 @@ select { appearance: none; padding-right: 30px; background-image: url("data:imag
 /* Crossed-out eye next to the name of a private profile. */
 .priv { display: inline-flex; flex: none; color: var(--muted); }
 .priv[hidden] { display: none; }
+
+/* Selection mode: tick accounts and change their Steam profiles together. */
+.pick { display: none; position: absolute; left: 12px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 6px; border: 1.5px solid var(--muted); background: var(--surface); }
+.list.selecting .pick { display: block; }
+.list.selecting .row { padding-left: 42px; cursor: pointer; }
+.list.selecting .row > *:not(.pick) { pointer-events: none; }
+.row.picked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.row.picked .pick { background: var(--accent); border-color: var(--accent); }
+.row.picked .pick::after { content: ''; position: absolute; left: 5px; top: 1.5px; width: 5px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.list.grid .pick { top: 12px; margin-top: 0; }
+.bulk-bar { position: sticky; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 14px; background: var(--raised); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); z-index: 5; }
+.bulk-bar[hidden] { display: none; }
+.bulk-count { font-weight: 550; margin-right: 4px; }
+.bulk-sep { flex: 1; }
+.bulk-line { flex: 1; min-width: 80px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bulk-line i { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+.dlg-list.plain li { color: var(--text); }
