@@ -328,7 +328,7 @@ function buildShell(): void {
 	const side = el(
 		'aside',
 		{ class: 'sidebar' },
-		el('div', { class: 'brand' }, logo(40, true), el('span', { class: 'label', textContent: 'Authenticator' })),
+		el('div', { class: 'brand' }, logo(40, true), el('span', { class: 'label', textContent: 'Steam Account Manager' })),
 		el(
 			'nav',
 			{ class: 'navlist' },
@@ -780,7 +780,7 @@ function showLock(): void {
 		});
 		card.replaceChildren(
 			logo(56),
-			el('h1', { textContent: 'Authenticator is locked' }),
+			el('h1', { textContent: 'Steam Account Manager is locked' }),
 			el('p', { class: 'hint', textContent: usePin ? 'Enter your PIN.' : 'Enter your master password to use saved passwords.' }),
 			form,
 			...(vaultState.pin ? [el('button', { class: 'link', type: 'button', textContent: usePin ? 'Use master password instead' : 'Use PIN instead', onclick: () => { usePin = !usePin; draw(); } })] : []),
@@ -2615,7 +2615,7 @@ async function settingsScreen(): Promise<void> {
 
 			el('p', { class: 'hint fine', id: 'ver' }),
 			el('p', { class: 'hint fine', textContent: 'New accounts are copied; existing ones are never overwritten and your originals are never changed. Passwords you choose to save, and the sign-in token, are kept next to your maFiles (credentials.json and sessions.json), in plain text unless you set a master password under Security.' }),
-			el('div', { class: 'about' }, logo(44), el('div', {}, el('strong', { textContent: 'Authenticator' }), el('p', { class: 'hint', textContent: '© 2026 github.com/AnotherAsianDev. MIT License.' }), el('p', { class: 'hint fine', textContent: 'Not affiliated with or endorsed by Valve. Steam is a trademark of Valve Corporation.' })))
+			el('div', { class: 'about' }, logo(44), el('div', {}, el('strong', { textContent: 'Steam Account Manager' }), el('p', { class: 'hint', textContent: '© 2026 github.com/AnotherAsianDev. MIT License.' }), el('p', { class: 'hint fine', textContent: 'Not affiliated with or endorsed by Valve. Steam is a trademark of Valve Corporation.' })))
 		]
 	};
 	const tabBar = el('div', { class: 'tabs', role: 'tablist' }, ...tabDefs.map(([id, label]) =>

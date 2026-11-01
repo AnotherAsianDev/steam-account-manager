@@ -1,6 +1,6 @@
-# Steam Authenticator
+# Steam Account Manager
 
-A lean desktop Steam Guard authenticator for Windows. Plain maFiles next to the exe, confirmations, no background hammering of Steam.
+A lean desktop Steam Guard authenticator and account manager for Windows. Plain maFiles next to the exe, confirmations, no background hammering of Steam.
 
 ![Accounts](docs/screenshots/codes.png)
 
@@ -41,7 +41,7 @@ A lean desktop Steam Guard authenticator for Windows. Plain maFiles next to the 
 
 *Screenshots use made-up accounts.*
 
-Minimal desktop Steam Guard authenticator (Electron + TypeScript, no UI framework).
+Minimal desktop Steam Guard authenticator and account manager (Electron + TypeScript, no UI framework).
 
 - **Accounts and codes** with Steam clock sync, the time left shown as a ring around the code box. Click the code box to copy (clipboard clears after a configurable time). Click an account name to open its Steam profile.
 - **Drop folder:** put maFiles (any file name) into the storage folder while the app is running or closed;
@@ -70,7 +70,7 @@ Minimal desktop Steam Guard authenticator (Electron + TypeScript, no UI framewor
     npm install      (PowerShell: npm.cmd install)
     npm test
     npm start        (PowerShell: npm.cmd start)
-    npm run package:win   builds out/Authenticator-portable (no Node needed to run it)
+    npm run package:win   builds out/SteamAccountManager-portable (no Node needed to run it)
 
 Code generation is checked against steam-totp for parity (`npm test`).
 
@@ -93,10 +93,10 @@ On an account's page, Profile / Inventory / Trade offers / Market / Store / Acco
 ## Folder layout (Windows build)
 
 ```
-Authenticator.exe   small launcher, double-click this
-app/                the program itself
-maFiles/            your maFiles, like SDA (created on first start)
-data/               settings, saved passwords, caches (created on first start)
+SteamAccountManager.exe   small launcher, double-click this
+app/                        the program itself
+maFiles/                    your maFiles, like SDA (created on first start)
+data/                       settings, saved passwords, caches (created on first start)
 ```
 Everything lives next to the exe, so copying or backing up the folder moves it all. If the folder is not writable (for example inside Program Files) the per-user app data folder is used instead. On first start, data from the earlier per-user location is copied over (the old copy is left in place).
 

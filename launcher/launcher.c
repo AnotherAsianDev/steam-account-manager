@@ -1,4 +1,4 @@
-// Tiny launcher: starts app\Authenticator.exe next to itself, so the folder you
+// Tiny launcher: starts app\SteamAccountManager.exe next to itself, so the folder you
 // open only shows this file, maFiles and data. No window of its own.
 #include <windows.h>
 #include <wchar.h>
@@ -14,14 +14,14 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, PWSTR cmd, int show) {
 
 	wchar_t exe[MAX_PATH * 2], dir[MAX_PATH * 2], line[MAX_PATH * 4 + 2048];
 	swprintf(dir, MAX_PATH * 2, L"%ls\\app", self);
-	swprintf(exe, MAX_PATH * 2, L"%ls\\Authenticator.exe", dir);
+	swprintf(exe, MAX_PATH * 2, L"%ls\\SteamAccountManager.exe", dir);
 	swprintf(line, MAX_PATH * 4 + 2048, L"\"%ls\" %ls", exe, cmd ? cmd : L"");
 
 	STARTUPINFOW si; PROCESS_INFORMATION pi;
 	ZeroMemory(&si, sizeof si); si.cb = sizeof si;
 	ZeroMemory(&pi, sizeof pi);
 	if (!CreateProcessW(exe, line, NULL, NULL, FALSE, 0, NULL, dir, &si, &pi)) {
-		MessageBoxW(NULL, L"Could not start app\\Authenticator.exe. Keep the app folder next to this file.", L"Authenticator", MB_ICONERROR);
+		MessageBoxW(NULL, L"Could not start app\\SteamAccountManager.exe. Keep the app folder next to this file.", L"Steam Account Manager", MB_ICONERROR);
 		return 1;
 	}
 	CloseHandle(pi.hThread); CloseHandle(pi.hProcess);

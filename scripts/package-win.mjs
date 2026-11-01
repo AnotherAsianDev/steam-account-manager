@@ -1,4 +1,4 @@
-// Builds a self-contained Windows folder: Authenticator.exe, no Node or npm needed on the target PC.
+// Builds a self-contained Windows folder: SteamAccountManager.exe, no Node or npm needed on the target PC.
 import { packager } from '@electron/packager';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
@@ -13,13 +13,13 @@ mkdirSync('out/app', { recursive: true });
 for (const f of ['main.js', 'preload.js', 'index.html', 'renderer.js', 'style.css', 'icon.png']) cpSync(`dist/${f}`, `out/app/${f}`);
 writeFileSync(
 	'out/app/package.json',
-	JSON.stringify({ name: pkg.name, productName: 'Authenticator', version: pkg.version, main: 'main.js' }, null, 2)
+	JSON.stringify({ name: pkg.name, productName: 'Steam Account Manager', version: pkg.version, main: 'main.js' }, null, 2)
 );
 
 const paths = await packager({
 	dir: 'out/app',
 	out: 'out',
-	name: 'Authenticator',
+	name: 'SteamAccountManager',
 	icon: 'build/icon.ico',
 	platform: 'win32',
 	arch: 'x64',
@@ -30,18 +30,18 @@ const paths = await packager({
 const built = paths[0];
 
 // Final layout, kept tidy:
-//   Authenticator-portable/
-//     Authenticator.exe   small launcher
+//   SteamAccountManager-portable/
+//     SteamAccountManager.exe   small launcher
 //     (maFiles/ and data/ are created by the app on first start and are NOT in the
 //      release, so dropping a new release over an old folder can never overwrite them)
 //     app/                the program and its support files
-const portable = 'out/Authenticator-portable';
+const portable = 'out/SteamAccountManager-portable';
 rmSync(portable, { recursive: true, force: true });
 mkdirSync(portable, { recursive: true });
 cpSync(built, `${portable}/app`, { recursive: true });
 if (!existsSync('launcher/Launcher.exe')) throw new Error('launcher/Launcher.exe is missing');
-cpSync('launcher/Launcher.exe', `${portable}/Authenticator.exe`);
-await setExeIcon(`${portable}/Authenticator.exe`, 'build/icon.ico');
+cpSync('launcher/Launcher.exe', `${portable}/SteamAccountManager.exe`);
+await setExeIcon(`${portable}/SteamAccountManager.exe`, 'build/icon.ico');
 
 // Only English is used, so the other language packs are just clutter.
 const locales = `${portable}/app/locales`;

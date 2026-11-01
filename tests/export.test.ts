@@ -64,7 +64,7 @@ describe('portable layout', () => {
 	it('keeps maFiles next to the program, behind the launcher', () => {
 		const root = mkdtempSync(join(tmpdir(), 'portable-'));
 		mkdirSync(join(root, 'app'));
-		const l = resolveLayout(true, join(root, 'app', 'Authenticator.exe'), join(root, 'legacy'));
+		const l = resolveLayout(true, join(root, 'app', 'SteamAccountManager.exe'), join(root, 'legacy'));
 		expect(l).toMatchObject({ portable: true, maFiles: join(root, 'maFiles'), data: join(root, 'data') });
 	});
 	it('uses the user folder when not packaged', () => {

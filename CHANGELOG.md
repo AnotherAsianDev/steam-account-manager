@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- The app is now called Steam Account Manager: window title, sidebar, lock screen, `SteamAccountManager.exe` and the release zip (`SteamAccountManager-vX-win-x64.zip`). The launcher was rebuilt for the new name. maFiles and data are untouched; copy the new folder over the old one (or move `maFiles` and `data` into it) and delete the old `Authenticator.exe`.
+- The GitHub repository keeps its address until it is renamed there; the update check follows GitHub's redirect.
+- Unchanged on purpose: the PIN key folder `AuthenticatorDevice` in `%LOCALAPPDATA%`, so existing PINs keep working.
+
 ## 0.11.2
 
 - Random nicknames now also include single nice-sounding words (Aurora, solstice, Willow7) next to the two-word and number forms.

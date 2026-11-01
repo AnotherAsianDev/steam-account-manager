@@ -1,8 +1,8 @@
 {
   "name": "steam-authenticator",
-  "version": "0.11.2",
+  "version": "0.12.0",
   "private": true,
-  "description": "Minimal desktop Steam Guard authenticator",
+  "description": "Minimal desktop Steam Guard authenticator and account manager",
   "license": "MIT",
   "author": "github.com/AnotherAsianDev",
   "main": "dist/main.js",

@@ -769,7 +769,7 @@ function registerIpc(): void {
 		});
 		const file = sealBackup({ version: 1, createdAt: new Date().toISOString(), accounts: list }, pw);
 		const stamp = new Date().toISOString().slice(0, 10);
-		const picked = await dialog.showSaveDialog(win!, { title: 'Save backup', defaultPath: `authenticator-backup-${stamp}.sabk`, filters: [{ name: 'Backup', extensions: ['sabk'] }] });
+		const picked = await dialog.showSaveDialog(win!, { title: 'Save backup', defaultPath: `steam-account-manager-backup-${stamp}.sabk`, filters: [{ name: 'Backup', extensions: ['sabk'] }] });
 		if (picked.canceled || !picked.filePath) return null;
 		writeFileSync(picked.filePath, file, { mode: 0o600 });
 		log.info('app', `Backup saved with ${list.length} account(s)`);
@@ -822,7 +822,7 @@ function registerIpc(): void {
 		if (typeof message === 'string') log.error('window', message.slice(0, 1000));
 	});
 	handle('logSave', async () => {
-		const picked = await dialog.showSaveDialog(win!, { title: 'Save log', defaultPath: 'authenticator-log.txt', filters: [{ name: 'Text', extensions: ['txt'] }] });
+		const picked = await dialog.showSaveDialog(win!, { title: 'Save log', defaultPath: 'steam-account-manager-log.txt', filters: [{ name: 'Text', extensions: ['txt'] }] });
 		if (picked.canceled || !picked.filePath) return null;
 		writeFileSync(picked.filePath, log.text(), { mode: 0o600 });
 		return picked.filePath;
@@ -1008,7 +1008,7 @@ function createWindow(): void {
 		...(existsSync(join(__dirname, 'icon.png')) ? { icon: join(__dirname, 'icon.png') } : {}),
 		minWidth: WINDOW_MIN.width,
 		minHeight: WINDOW_MIN.height,
-		title: 'Authenticator',
+		title: 'Steam Account Manager',
 		// The window draws its own title bar (see the renderer).
 		frame: false,
 		show: false,
@@ -1062,7 +1062,7 @@ app.whenReady().then(async () => {
 		await startApp();
 	} catch (err) {
 		log.error('app', 'The program could not start', err);
-		dialog.showErrorBox('Authenticator could not start', `${describeWriteError(err) ?? 'Something went wrong while starting.'}\n\nYour accounts and files were not changed.`);
+		dialog.showErrorBox('Steam Account Manager could not start', `${describeWriteError(err) ?? 'Something went wrong while starting.'}\n\nYour accounts and files were not changed.`);
 		app.exit(1);
 	}
 });
