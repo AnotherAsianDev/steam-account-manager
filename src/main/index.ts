@@ -549,7 +549,7 @@ function registerIpc(): void {
 				const names = r.failed.map((id) => accounts.get(id)?.accountName ?? id);
 				const text = names.length ? `Steam profiles read: ${r.done} of ${ids.length}. No answer for ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''}` : `All ${ids.length} Steam profiles read`;
 				log.info('profile', text);
-				notice(text, names.length > 0);
+				notice(r.limited ? `${text}. Steam asked to slow down, so the rest was left. Try again in a few minutes` : text, names.length > 0);
 			});
 			return;
 		}

@@ -170,3 +170,27 @@ describe('visibility after a restart', () => {
 		expect(cache.revision(ID)).toBe(n + 1);
 	});
 });
+
+describe('Steam asks to slow down', () => {
+	it('stops asking for profiles, keeps what was known, and does not call a limited answer a read', async () => {
+		let hits = 0;
+		let limited = false;
+		vi.stubGlobal('fetch', async (url: string) => {
+			hits++;
+			if (!String(url).includes('xml=1')) return new Response(Buffer.from([1, 2, 3]));
+			return limited ? new Response('Too many requests', { status: 429, headers: { 'retry-after': '120' } }) : new Response(xml('Olam'));
+		});
+		const cache = new AvatarCache(mkdtempSync(join(tmpdir(), 'av-')), () => undefined, 'https://example.test/profiles');
+		expect(await cache.readNow(ID)).toBeUndefined();
+		limited = true;
+		expect(await cache.readNow(ID)).toMatch(/rate-limiting/);
+		expect(cache.limited()).toBe(true);
+		expect(cache.nickname(ID)).toBe('Olam');
+		// While it waits, no further request goes out.
+		const before = hits;
+		expect(await cache.readNow(ID)).toMatch(/rate-limiting/);
+		const all = await cache.readAll([ID, '76561198000000002']);
+		expect(hits).toBe(before);
+		expect(all).toEqual({ done: 0, failed: [ID, '76561198000000002'], limited: true });
+	});
+});

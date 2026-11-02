@@ -87,7 +87,7 @@ button:focus-visible, .row:focus-visible, input:focus-visible, select:focus-visi
 .row.banned { border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .row > .avatar-slot { grid-column: 1; display: flex; }
 .row > .who { grid-column: 2; }
-.row > .flags { grid-column: 3; }
+.row > .flags { grid-column: 3; justify-self: end; }
 .row > .code { grid-column: 4; }
 .row > .star { grid-column: 5; }
 .row > .more { grid-column: 6; }
@@ -125,10 +125,8 @@ button:focus-visible, .row:focus-visible, input:focus-visible, select:focus-visi
 
 /* small status marks after the name; the meaning is in the tooltip */
 .flags { display: inline-flex; align-items: center; gap: 4px; flex: none; }
-.flag-gap { width: 18px; height: 18px; flex: none; }
 .flags:empty { display: none; }
-.list.columns .flag-gap, .list.grid .flag-gap { display: none; }
-/* List and compact list: every row shares the same columns, so the marks line up from row to row. */
+/* List and compact list: every row shares the same columns, so the code, star and menu line up from row to row. The marks hug the code and close up. */
 .list:not(.columns):not(.grid) { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; column-gap: 12px; row-gap: 6px; }
 .list:not(.columns):not(.grid) > .row { grid-column: 1 / -1; grid-template-columns: subgrid; }
 .flag {
@@ -154,7 +152,7 @@ button.flag { cursor: pointer; }
 .list.grid .sid { grid-column: 2; grid-row: 2; align-self: start; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list.grid .row > .star { grid-column: 3; grid-row: 1 / 3; align-self: center; }
 .list.grid .row > .more { grid-column: 4; grid-row: 1 / 3; align-self: center; }
-.list.grid .flags { grid-column: 1 / -1; grid-row: 3; flex-wrap: wrap; margin-top: 4px; }
+.list.grid .flags { grid-column: 1 / -1; grid-row: 3; justify-self: start; flex-wrap: wrap; margin-top: 4px; }
 .list.grid .flags:empty { display: none; }
 .list.grid .row > .code { grid-column: 1 / -1; grid-row: 4; justify-self: stretch; text-align: center; font-size: 22px; margin-top: 8px; padding: 8px 0; }
 .avatar {
@@ -273,6 +271,8 @@ input[type='password'], input[type='text'], textarea.lines {
 .empty-state { margin-top: 56px; }
 .filterbar select { width: 100%; }
 .filterbar .filter-line select { width: auto; }
+.filter-by { display: flex; gap: 10px; }
+.filterbar .filter-by select.sort { flex: 1 1 0; min-width: 0; }
 
 /* app shell */
 .shell { display: grid; grid-template-columns: 240px 1fr; height: 100vh; }

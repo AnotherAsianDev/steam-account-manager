@@ -520,6 +520,8 @@ function profileLink(id: string, name: string, cls: string): HTMLButtonElement {
 let query = '';
 let listFilter: 'all' | 'pending' | 'signin' = 'all';
 let tagFilter = '';
+let profileFilter = '';
+let statusFilter = '';
 let confirmType = 'all';
 let pendingTotal = 0;
 const setTabCount = (): void => {
@@ -868,17 +870,16 @@ function drawFlags(li: HTMLElement, row: Row): void {
 		return b;
 	};
 	const detail = (): void => void navigate({ name: 'detail', id: row.steamId });
-	/** What needs doing (confirmations waiting, sign-in needed) sits right after the name. The rest has fixed places, so the same mark is in the same spot on every row: sign-in expiry, note. Bans and the tag follow. */
-	const gap = (): HTMLElement => el('span', { class: 'flag-gap', ariaHidden: 'true' });
+	/** What needs doing (confirmations waiting, sign-in needed) sits right after the name. The marks after it close up into one line, with no gaps for the ones an account does not have. */
 	const nodes: HTMLElement[] = [];
 	const status: HTMLElement[] = [];
 	if (row.state === 'signin') status.push(flag('warn', svgIcon('lock'), 'Sign in needed to see confirmations', detail));
 	else if (row.state === 'error') status.push(flag('warn', '↻', 'Could not check confirmations. Click for details', detail));
 	else if (row.pending) status.push(flag('hot', String(row.pending), `${row.pending} confirmation${row.pending === 1 ? '' : 's'} waiting. Click to review`, () => void navigate({ name: 'confirms' })));
 	li.querySelector<HTMLElement>('.status')!.replaceChildren(...status);
-	nodes.push(row.sessionDays !== null ? flag('warn', svgIcon('clock'), `The saved sign-in runs out in ${row.sessionDays} day${row.sessionDays === 1 ? '' : 's'}. Save the password to keep it going`, detail) : gap());
-	nodes.push(row.noProfile ? flag('warn', svgIcon('noprofile'), 'This account has no Steam profile yet. Click to set it up', detail) : gap());
-	nodes.push(row.note ? flag('note', svgIcon('note'), row.note, detail) : gap());
+	if (row.sessionDays !== null) nodes.push(flag('warn', svgIcon('clock'), `The saved sign-in runs out in ${row.sessionDays} day${row.sessionDays === 1 ? '' : 's'}. Save the password to keep it going`, detail));
+	if (row.noProfile) nodes.push(flag('warn', svgIcon('noprofile'), 'This account has no Steam profile yet. Click to set it up', detail));
+	if (row.note) nodes.push(flag('note', svgIcon('note'), row.note, detail));
 	for (const label of row.bans) nodes.push(flag('ban', svgIcon(banIcon(label)), `Steam shows: ${label}`, detail));
 	if (row.tags[0]) nodes.push(el('span', { class: 'tag', textContent: row.tags[0] }));
 	box.replaceChildren(...nodes);
@@ -1032,16 +1033,31 @@ async function listScreen(): Promise<void> {
 			)
 		);
 	renderChips();
+	const matchProfile = (r: Row): boolean =>
+		!profileFilter || (profileFilter === 'noprofile' ? r.noProfile : profileFilter === 'unknown' ? !r.noProfile && r.privacy === null : r.privacy === profileFilter);
+	const matchStatus = (r: Row): boolean =>
+		!statusFilter ||
+		(statusFilter === 'banned' ? r.bans.length > 0 : statusFilter === 'clean' ? r.bans.length === 0 : statusFilter === 'nopw' ? !r.hasPassword : statusFilter === 'expiring' ? r.sessionDays !== null : statusFilter === 'pinned' ? r.pinned : statusFilter === 'note' ? r.note !== '' : true);
+	const choice = (label: string, options: [string, string][], get: () => string, set: (v: string) => void): HTMLSelectElement => {
+		const sel = el('select', { class: 'sort', ariaLabel: label, title: label }, ...options.map(([v, text]) => el('option', { value: v, textContent: text, selected: get() === v })));
+		sel.addEventListener('change', () => { set(sel.value); applyFilter(); });
+		return sel;
+	};
+	const profileSelect = choice('Filter by Steam profile', [['', 'All profiles'], ['private', 'Private'], ['friends', 'Friends only'], ['public', 'Public'], ['unknown', 'Not read yet'], ['noprofile', 'No Steam profile']], () => profileFilter, (v) => { profileFilter = v; });
+	const statusSelect = choice('Filter by status', [['', 'Any status'], ['banned', 'Banned'], ['clean', 'No bans'], ['nopw', 'No password saved'], ['expiring', 'Sign-in running out'], ['pinned', 'Starred'], ['note', 'Has a note']], () => statusFilter, (v) => { statusFilter = v; });
 	const none = el('p', { class: 'hint center-text', hidden: true, textContent: 'No account matches.' });
 	function applyFilter(): void {
 		const q = query.trim().toLowerCase();
+		const byId = new Map(lastRows.map((r) => [r.steamId, r] as const));
 		let shown = 0;
 		list.querySelectorAll<HTMLLIElement>('li').forEach((li) => {
 			const matchText = !q || (li.dataset['name'] ?? '').includes(q) || li.dataset['id']!.includes(q);
 			const st = li.dataset['state'];
 			const matchChip = listFilter === 'all' || (listFilter === 'pending' && Number(li.dataset['pending'] ?? 0) > 0) || (listFilter === 'signin' && st === 'signin');
 			const matchTag = !tagFilter || (li.dataset['tags'] ?? '').split('\n').includes(tagFilter);
-			li.hidden = !(matchText && matchChip && matchTag);
+			const row = byId.get(li.dataset['id']!);
+			const matchMore = !row || (matchProfile(row) && matchStatus(row));
+			li.hidden = !(matchText && matchChip && matchTag && matchMore);
 			if (!li.hidden) shown++;
 		});
 		none.hidden = shown > 0 || list.children.length === 0;
@@ -1153,7 +1169,7 @@ async function listScreen(): Promise<void> {
 		tagSelect.value = tagFilter;
 		tagSelect.hidden = tags.length === 0;
 	}
-	const filterBar = el('div', { class: 'filterbar' }, search, el('div', { class: 'filter-line' }, chipRow, viewBtn, tagSelect, sortSelect));
+	const filterBar = el('div', { class: 'filterbar' }, search, el('div', { class: 'filter-line' }, chipRow, viewBtn, sortSelect), el('div', { class: 'filter-by' }, profileSelect, statusSelect, tagSelect));
 	const overview = el('section', { class: 'overview', hidden: true });
 	/** Account count and what is still missing, from the same list as the To do tab (ignored items are not counted). */
 	let lastTodo: TodoItem[] | undefined;

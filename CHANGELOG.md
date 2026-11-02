@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.0
+
+- New filter menus on the Accounts page: Steam profile (private, friends only, public, not read yet, no Steam profile) and status (banned, no bans, no password saved, sign-in running out, starred, has a note). They combine with the search, the chips and the tag menu.
+- The marks after a name (sign-in expiry, no profile, note, bans, tag) now close up into one line with no empty gaps, and sit next to the code.
+- Rate limits: when Steam answers "too many requests" while a profile is read, the answer used to be treated like a normal page. Now profile reading pauses for the wait Steam asks for (1 to 15 minutes, 5 if it does not say), nothing is marked as read, and "Read all" stops and says so. Other server errors are reported as such.
+
 ## 0.12.2
 
 - New logo: a smoother shield with SAM in white, used for the app icon, sidebar, lock screen and About page.

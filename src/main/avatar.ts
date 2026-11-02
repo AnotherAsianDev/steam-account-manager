@@ -277,6 +277,15 @@ export class AvatarCache {
 		step(0);
 	}
 
+	/** When Steam last said "too many requests", no profile is asked for until this time. */
+	private coolUntil = 0;
+	private static readonly LIMITED = 'Steam is rate-limiting requests. Wait a few minutes and try again';
+
+	/** True while Steam asked to slow down. */
+	limited(): boolean {
+		return Date.now() < this.coolUntil;
+	}
+
 	/** Reads this profile right now, ahead of the queue. Returns why it failed, or nothing. */
 	async readNow(steamId: string): Promise<string | undefined> {
 		this.forget(steamId);
@@ -284,13 +293,18 @@ export class AvatarCache {
 	}
 
 	/** Reads these profiles one after the other with a pause, and says which ones Steam did not answer for. */
-	async readAll(ids: string[]): Promise<{ done: number; failed: string[] }> {
+	async readAll(ids: string[]): Promise<{ done: number; failed: string[]; limited: boolean }> {
 		const failed: string[] = [];
 		for (const [i, id] of ids.entries()) {
 			if (await this.readNow(id)) failed.push(id);
+			// Steam asked to slow down: the rest is left alone instead of asking again.
+			if (this.limited()) {
+				failed.push(...ids.slice(i + 1));
+				break;
+			}
 			if (i < ids.length - 1) await new Promise((r) => setTimeout(r, 1500));
 		}
-		return { done: ids.length - failed.length, failed };
+		return { done: ids.length - failed.length, failed, limited: this.limited() };
 	}
 
 	/** Public, friends only or private, once Steam has said. */
@@ -391,8 +405,18 @@ export class AvatarCache {
 	/** Reads the profile; returns why it failed in words, or nothing when it worked. */
 	private async download(steamId: string): Promise<string | undefined> {
 		const want = this.wants.get(steamId) ?? { image: true, bans: true };
+		if (this.limited()) return AvatarCache.LIMITED;
 		try {
-			const xml = await fetch(`${this.profileBase}/${steamId}/?xml=1&nocache=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(10_000) }).then((r) => r.text());
+			const res = await fetch(`${this.profileBase}/${steamId}/?xml=1&nocache=${Date.now()}`, { headers: { 'Cache-Control': 'no-cache' }, signal: AbortSignal.timeout(10_000) });
+			if (res.status === 429) {
+				// Steam's own wait, between one and fifteen minutes; five when it does not say.
+				const asked = Number(res.headers.get('retry-after'));
+				this.coolUntil = Date.now() + (Number.isFinite(asked) && asked > 0 ? Math.min(Math.max(asked, 60), 900) : 300) * 1000;
+				log.warn('avatar', `Steam is rate-limiting profile reads; pausing them for ${Math.round((this.coolUntil - Date.now()) / 60_000)} minutes`);
+				return AvatarCache.LIMITED;
+			}
+			if (res.status >= 500) throw new Error(`Steam answered HTTP ${res.status}`);
+			const xml = await res.text();
 			const before = this.profiles[steamId];
 			const next: Profile = { ...(before ?? { checked: 0 }), checked: Date.now() };
 			let name = extractPersonaName(xml);
