@@ -63,6 +63,9 @@ Minimal desktop Steam Guard authenticator and account manager (Electron + TypeSc
 - **Select and change many at once:** the Select button on the Accounts page lets you tick accounts (or take all shown) and make them private or public, give them random names or random pictures. It works one account at a time with a pause of 5 to 9 seconds, shows progress with a Stop button, stops by itself when Steam asks to slow down (profile reads also pause for the time Steam asks), and ends with a window listing what happened to each account (also written to the Log).
 - **Trades tab, open offers:** see offers that nobody accepted yet, per account or all at once, and cancel them.
 - **Trades tab, overview:** how many tradable and locked items every account holds in a game, with a total.
+- **Always visible feedback:** every action answers in a message, failures say why, bulk runs end with a window listing each account, and the Log page (sidebar) keeps the details. Secrets are hidden before anything is logged.
+- **Steam rate limits:** requests to Steam go one at a time with pauses; when Steam asks to slow down (HTTP 429) the app stops asking for the wait Steam names (or five minutes) and says so instead of showing wrong data.
+- **Updates:** optional check against this repository's latest release at start or on "Check now"; it never downloads or installs anything, it only tells you.
 - **Backup:** one encrypted file with all maFiles, saved passwords, notes and tags (Settings, Import and updates). Restoring only adds missing accounts.
 - **Trades tab, bulk:** tick several accounts and a game, preview what each would send, then send everything to one account.
 - **Trades tab:** pick an account's tradeable items (with pictures) and send them to another of your accounts or a trade link in one go; offers are split, checked against the live inventory and confirmed for you.
