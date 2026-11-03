@@ -34,7 +34,7 @@ A lean desktop Steam Guard authenticator and account manager for Windows. Plain 
 <td width="50%"><img src="docs/screenshots/overview.png" alt="Overview"><br><sub>Overview: tradable and locked items of every account</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/select.png" alt="Select accounts"><br><sub>Select: tick accounts and change their Steam profiles together</sub></td>
+<td width="50%"><img src="docs/screenshots/select.png" alt="Select accounts"><br><sub>Select: tick accounts and change their Steam profiles together, with the profile and status filters above the list</sub></td>
 <td width="50%"></td>
 </tr>
 </table>
