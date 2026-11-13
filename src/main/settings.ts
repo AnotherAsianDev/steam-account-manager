@@ -10,6 +10,8 @@ export type Layout = (typeof LAYOUT_OPTIONS)[number];
 
 export interface Settings {
 	theme: 'system' | 'dark' | 'light';
+	/** Own accent colour as #rrggbb; empty = the theme's own. */
+	accent: string;
 	/** The side menu shows only icons. */
 	sidebarCollapsed: boolean;
 	/** Read VAC and trade ban state from the public profile (no extra request). */
@@ -49,6 +51,7 @@ export interface Settings {
 
 export const DEFAULTS: Settings = {
 	theme: 'system',
+	accent: '',
 	checkBans: true,
 	sidebarCollapsed: true,
 	showSteamId: false,
@@ -79,6 +82,7 @@ export function sanitize(input: unknown): Settings {
 	const o = (typeof input === 'object' && input !== null ? input : {}) as Record<string, unknown>;
 	return {
 		theme: oneOf(o['theme'], ['system', 'dark', 'light'] as const, DEFAULTS.theme),
+		accent: typeof o['accent'] === 'string' && /^#[0-9a-f]{6}$/i.test(o['accent']) ? o['accent'].toLowerCase() : DEFAULTS.accent,
 		checkBans: typeof o['checkBans'] === 'boolean' ? o['checkBans'] : DEFAULTS.checkBans,
 		sidebarCollapsed: typeof o['sidebarCollapsed'] === 'boolean' ? o['sidebarCollapsed'] : DEFAULTS.sidebarCollapsed,
 		showSteamId: typeof o['showSteamId'] === 'boolean' ? o['showSteamId'] : DEFAULTS.showSteamId,

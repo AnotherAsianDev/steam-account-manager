@@ -53,6 +53,7 @@ interface Status {
 }
 interface Settings {
 	theme: 'system' | 'dark' | 'light';
+	accent: string;
 	checkBans: boolean;
 	hideKeyHint: boolean;
 	sidebarCollapsed: boolean;
@@ -288,7 +289,7 @@ const icon = (name: string): HTMLElement =>
 let logoCount = 0;
 const logo = (size: number, bare = false): HTMLElement => {
 	const g = `lg${++logoCount}`;
-	return el('span', { class: 'logo', innerHTML: `<svg viewBox="${bare ? '100 70 312 372' : '0 0 512 512'}" width="${bare ? Math.round((size * 312) / 372) : size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${g}b" x1=".1" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#232838"/><stop offset="1" stop-color="#0d0e11"/></linearGradient><linearGradient id="${g}s" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#8ea3ff"/><stop offset="1" stop-color="#4658d9"/></linearGradient></defs>${bare ? '' : `<rect x="24" y="24" width="464" height="464" rx="118" fill="url(#${g}b)"/><rect x="25.5" y="25.5" width="461" height="461" rx="116.5" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="3"/>`}<path d="M256 76 404 128v124c0 90-62 142-148 180C170 394 108 342 108 252V128z" fill="url(#${g}s)"/><path d="M256 76 404 128v52C340 150 300 140 256 140s-84 10-148 40v-52z" fill="#fff" fill-opacity=".14"/><defs><g id="${g}t" fill="none" stroke-width="21" stroke-linecap="round" stroke-linejoin="round" transform="translate(256 240) scale(.74) translate(-257 -241)"><path d="M204 220C198 206 184 200 172 200C154 200 144 210 144 222C144 250 204 236 204 262C204 274 192 282 174 282C160 282 148 276 142 264"/><path d="M222 282L256 200L290 282M234 256H278"/><path d="M310 282V200L341 248L372 200V282"/></g></defs><use href="#${g}t" y="7" stroke="#1a2266" stroke-opacity=".35"/><use href="#${g}t" stroke="#fff"/></svg>` });
+	return el('span', { class: 'logo', innerHTML: `<svg viewBox="${bare ? '100 70 312 372' : '0 0 512 512'}" width="${bare ? Math.round((size * 312) / 372) : size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${g}b" x1=".1" y1="0" x2=".9" y2="1"><stop class="lg-b0" offset="0"/><stop class="lg-b1" offset="1"/></linearGradient><linearGradient id="${g}s" x1="0" y1="0" x2=".35" y2="1"><stop class="lg-s0" offset="0"/><stop class="lg-s1" offset="1"/></linearGradient></defs>${bare ? '' : `<rect class="lg-tile" x="24" y="24" width="464" height="464" rx="118" fill="url(#${g}b)"/><rect class="lg-rim" x="25.5" y="25.5" width="461" height="461" rx="116.5" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="3"/>`}<path d="M256 76 404 128v124c0 90-62 142-148 180C170 394 108 342 108 252V128z" fill="url(#${g}s)" class="lg-shield"/><path class="lg-hi" d="M256 76 404 128v52C340 150 300 140 256 140s-84 10-148 40v-52z" fill="#fff" fill-opacity=".14"/><defs><g id="${g}t" fill="none" stroke-width="21" stroke-linecap="round" stroke-linejoin="round" transform="translate(256 240) scale(.74) translate(-257 -241)"><path d="M204 220C198 206 184 200 172 200C154 200 144 210 144 222C144 250 204 236 204 262C204 274 192 282 174 282C160 282 148 276 142 264"/><path d="M222 282L256 200L290 282M234 256H278"/><path d="M310 282V200L341 248L372 200V282"/></g></defs><use class="lg-shd" href="#${g}t" y="7"/><use class="lg-ink" href="#${g}t"/></svg>` });
 };
 
 const content = el('div', { class: 'content' });
@@ -443,6 +444,17 @@ function applySettings(s: Settings): void {
 	settings = s;
 	if (s.theme === 'system') delete document.documentElement.dataset['theme'];
 	else document.documentElement.dataset['theme'] = s.theme;
+	const root = document.documentElement.style;
+	if (s.accent) {
+		const [r, g, b] = [1, 3, 5].map((i) => parseInt(s.accent.slice(i, i + 2), 16));
+		document.documentElement.dataset['accent'] = '';
+		root.setProperty('--accent', s.accent);
+		root.setProperty('--on-accent', (0.299 * (r ?? 0) + 0.587 * (g ?? 0) + 0.114 * (b ?? 0)) / 255 > 0.58 ? '#0b0b0c' : '#ffffff');
+	} else {
+		delete document.documentElement.dataset['accent'];
+		root.removeProperty('--accent');
+		root.removeProperty('--on-accent');
+	}
 	document.body.classList.toggle('wide', s.layout !== 'list');
 	document.querySelector('.shell')?.classList.toggle('collapsed', s.sidebarCollapsed);
 	const t = document.querySelector<HTMLElement>('.mini.collapse');
@@ -724,6 +736,22 @@ function updateLockNav(): void {
 	b.classList.toggle('locked', vaultState.locked);
 	const shackle = vaultState.locked ? '<path d="M8 11V8a4 4 0 0 1 8 0v3"/>' : '<path d="M8 11V8a4 4 0 0 1 7.6-1.7"/>';
 	b.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/>${shackle}</svg>`;
+}
+
+const ACCENTS = ['#4c8dff', '#8b6cff', '#ff5c9a', '#ff5252', '#ff9f43', '#34c77b', '#2cc4c4'];
+/** Preset swatches, a free colour picker and a way back to the theme's own accent. */
+function accentPicker(current: string, change: (c: string) => void): HTMLElement {
+	const dot = (c: string): HTMLButtonElement => {
+		const b = el('button', { class: `swatch${current === c ? ' on' : ''}`, type: 'button', title: c, onclick: () => change(c) });
+		b.setAttribute('aria-label', `Accent ${c}`);
+		b.style.setProperty('background', c);
+		return b;
+	};
+	const pick = el('input', { type: 'color', class: 'swatch-pick', value: current || '#4c8dff', title: 'Pick a colour' });
+	pick.addEventListener('change', () => change(pick.value));
+	return el('span', { class: 'swatches' },
+		el('button', { class: `small${current ? '' : ' picked'}`, type: 'button', textContent: 'Default', onclick: () => change('') }),
+		...ACCENTS.map(dot), pick);
 }
 
 async function toggleLock(): Promise<void> {
@@ -2586,6 +2614,7 @@ async function settingsScreen(): Promise<void> {
 		general: [
 			row('Theme', 'System follows your Windows setting', el('span', { class: 'seg-group text' }, ...(['system', 'light', 'dark'] as const).map((t) =>
 				el('button', { class: `seg${s.theme === t ? ' on' : ''}`, type: 'button', textContent: { system: 'System', light: 'Light', dark: 'Dark' }[t], onclick: () => void set({ theme: t }) })))),
+			row('Accent colour', 'Buttons, highlights and the code ring', accentPicker(s.accent, (c) => void set({ accent: c }))),
 			row('Show Steam nickname', 'Instead of the login name, which then appears under it. Taken from the public profile', toggle(s.showNickname, (v) => void set({ showNickname: v }), 'Show Steam nickname')),
 			row('Show SteamID64', 'Under each account name', toggle(s.showSteamId, (v) => void set({ showSteamId: v }), 'Show SteamID64')),
 			row('Show profile pictures', 'Fetched from the public profile, at most once a week per account', toggle(s.showAvatars, (v) => void set({ showAvatars: v }), 'Show profile pictures')),
@@ -3243,7 +3272,7 @@ function bulkScreen(all: Row[], saved: { name: string; link: string }[]): void {
 async function boot(): Promise<void> {
 	const s = await api.settings();
 	if (s.ok) applySettings(s.value);
-	else applySettings({ theme: 'system', checkBans: true, sidebarCollapsed: true, showSteamId: false, showAvatars: true, showNickname: false, autoCheckSeconds: 0, checkOnStartup: true, clipboardClearSeconds: 30, autoDetect: true, importFolders: [], todoIgnored: [], exportFields: ['username', 'password', 'sharedSecret', 'identitySecret'], exportDelimiter: ':', exportSkipIncomplete: false, checkUpdates: true, sortBy: 'added-asc', layout: 'list', updateDismissed: '', hideKeyHint: false });
+	else applySettings({ theme: 'system', accent: '', checkBans: true, sidebarCollapsed: true, showSteamId: false, showAvatars: true, showNickname: false, autoCheckSeconds: 0, checkOnStartup: true, clipboardClearSeconds: 30, autoDetect: true, importFolders: [], todoIgnored: [], exportFields: ['username', 'password', 'sharedSecret', 'identitySecret'], exportDelimiter: ':', exportSkipIncomplete: false, checkUpdates: true, sortBy: 'added-asc', layout: 'list', updateDismissed: '', hideKeyHint: false });
 	api.onChanged(() => refreshView());
 	api.onLogChanged(() => {
 		void updateLogCount();

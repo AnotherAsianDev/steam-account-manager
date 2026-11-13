@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+
+- **Dark** and **Light** have a new neutral, minimal palette: no blue accent any more, white (Dark) or near-black (Light) as the accent, softened amber and red.
+- New setting **Accent colour** (Settings > General): seven presets, a free colour picker, or Default. It colours buttons, highlights, the code ring, the selection and the logo shield; text on it switches between black and white as needed. The exe icon keeps the neutral look.
+- The logo follows the theme: a white shield in Dark, a dark one in Light. The exe icon is the Dark one.
+- A Glass theme was tried and dropped: real Windows acrylic would not render in a frameless Electron window.
+
 ## 0.13.0
 
 - New filter menus on the Accounts page: Steam profile (private, friends only, public, not read yet, no Steam profile) and status (banned, no bans, no password saved, sign-in running out, starred, has a note). They combine with the search, the chips and the tag menu.
