@@ -289,7 +289,7 @@ const icon = (name: string): HTMLElement =>
 /** The app logo (same drawing as build/icon.svg). Gradient ids are unique per instance. */
 let logoCount = 0;
 let iconAccent: string | undefined;
-/** The window and taskbar icon follow the accent colour: the in-app logo drawn as a PNG with the colours written in. Empty = the built-in icon. */
+/** The window and taskbar icon follow the accent colour: the exe icon's graphite tile with the shield in the accent, drawn as a PNG with the colours written in. Empty = the built-in icon. */
 async function syncAppIcon(accent: string): Promise<void> {
 	if (accent === iconAccent) return;
 	iconAccent = accent;
@@ -297,7 +297,7 @@ async function syncAppIcon(accent: string): Promise<void> {
 	const rgb = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16));
 	const mix = (to: number, t: number): string => '#' + rgb.map((c) => Math.round(c + (to - c) * t).toString(16).padStart(2, '0')).join('');
 	const ink = (0.299 * rgb[0]! + 0.587 * rgb[1]! + 0.114 * rgb[2]!) / 255 > 0.58 ? '#0b0b0c' : '#ffffff';
-	const css = `.lg-b0{stop-color:#fbfbfa}.lg-b1{stop-color:#e4e4e1}.lg-rim{stroke:#000;stroke-opacity:.1}.lg-s0{stop-color:${mix(255, 0.22)}}.lg-s1{stop-color:${mix(0, 0.18)}}.lg-ink{stroke:${ink}}.lg-shd{stroke:transparent}`;
+	const css = `.lg-b0{stop-color:#2a2a2e}.lg-b1{stop-color:#121214}.lg-rim{stroke-opacity:.1}.lg-shield{stroke:#fff;stroke-opacity:.18;stroke-width:4}.lg-hi{fill-opacity:.1}.lg-s0{stop-color:${mix(255, 0.22)}}.lg-s1{stop-color:${mix(0, 0.18)}}.lg-ink{stroke:${ink}}.lg-shd{stroke:transparent}`;
 	const svg = logo(256).innerHTML.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace('<defs>', `<style>${css}</style><defs>`);
 	const img = new Image();
 	img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);

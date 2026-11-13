@@ -2,7 +2,7 @@
 
 ## 0.14.2
 
-- New neutral exe icon: a black shield with white SAM on a light tile, so it stands out on a dark taskbar. The accent-coloured window icon uses the same light tile.
+- New neutral exe icon: a graphite shield with white SAM on a dark tile. The accent-coloured window icon uses the same tile, with the shield in the accent.
 
 ## 0.14.1
 
