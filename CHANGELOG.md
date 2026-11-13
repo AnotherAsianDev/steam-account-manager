@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.2
+
+- New neutral exe icon: a black shield with white SAM on a light tile, so it stands out on a dark taskbar. The accent-coloured window icon uses the same light tile.
+
 ## 0.14.1
 
 - The window and taskbar icon follow the accent colour while the app runs (shield in the accent, letters black or white). The exe file itself and pinned shortcuts keep the neutral icon; Windows reads that from the file.
@@ -8,7 +12,7 @@
 
 - **Dark** and **Light** have a new neutral, minimal palette: no blue accent any more, white (Dark) or near-black (Light) as the accent, softened amber and red.
 - New setting **Accent colour** (Settings > General): seven presets, a free colour picker, or Default. It colours buttons, highlights, the code ring, the selection and the logo shield; text on it switches between black and white as needed. The exe icon keeps the neutral look.
-- The logo follows the theme: a white shield in Dark, a dark one in Light. The exe icon is the Dark one.
+- The logo follows the theme: a white shield in Dark, a dark one in Light. The exe icon stays neutral.
 - A Glass theme was tried and dropped: real Windows acrylic would not render in a frameless Electron window.
 
 ## 0.13.0
