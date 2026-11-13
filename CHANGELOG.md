@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.14.1
+
+- The window and taskbar icon follow the accent colour while the app runs (shield in the accent, letters black or white). The exe file itself and pinned shortcuts keep the neutral icon; Windows reads that from the file.
+
 ## 0.14.0
 
 - **Dark** and **Light** have a new neutral, minimal palette: no blue accent any more, white (Dark) or near-black (Light) as the accent, softened amber and red.

@@ -69,7 +69,7 @@ Minimal desktop Steam Guard authenticator and account manager (Electron + TypeSc
 - **Backup:** one encrypted file with all maFiles, saved passwords, notes and tags (Settings, Import and updates). Restoring only adds missing accounts.
 - **Trades tab, bulk:** tick several accounts and a game, preview what each would send, then send everything to one account.
 - **Trades tab:** pick an account's tradeable items (with pictures) and send them to another of your accounts or a trade link in one go; offers are split, checked against the live inventory and confirmed for you.
-- **Settings:** in tabs: theme (system, light or dark) and accent colour, nickname, SteamID64, pictures, ban watching and the optional API key, check on startup / optional interval, clipboard clearing, master password and PIN, updates, import folders, health check.
+- **Settings:** in tabs: theme (system, light or dark) and accent colour (also tints the logo and taskbar icon), nickname, SteamID64, pictures, ban watching and the optional API key, check on startup / optional interval, clipboard clearing, master password and PIN, updates, import folders, health check.
 
     npm install      (PowerShell: npm.cmd install)
     npm test

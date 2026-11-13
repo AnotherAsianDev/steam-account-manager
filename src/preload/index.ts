@@ -102,6 +102,7 @@ contextBridge.exposeInMainWorld('api', {
 	reveal: () => call('reveal'),
 	settings: () => call('settings'),
 	setSettings: (patch: unknown) => call('setSettings', patch),
+	setAppIcon: (dataUrl: string) => call('setAppIcon', dataUrl),
 	onChanged: (cb: () => void) => on('changed', cb),
 	onNotice: (cb: (n: { message: string; error: boolean }) => void) => on('notice', (p) => cb(p as { message: string; error: boolean }))
 });

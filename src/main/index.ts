@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, screen, shell } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, screen, shell } from 'electron';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { Accounts } from './accounts';
@@ -977,6 +977,13 @@ function registerIpc(): void {
 	});
 
 	handle('settings', () => settings.get());
+	// Only a PNG the renderer drew from the logo; anything else puts the built-in icon back.
+	handle('setAppIcon', (dataUrl: unknown) => {
+		if (!win || win.isDestroyed()) return;
+		const own = typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length < 2_000_000 ? nativeImage.createFromDataURL(dataUrl) : undefined;
+		const icon = own && !own.isEmpty() ? own : nativeImage.createFromPath(join(__dirname, 'icon.png'));
+		if (!icon.isEmpty()) win.setIcon(icon);
+	});
 	handle('setSettings', (patch: unknown) => {
 		const next = settings.update(patch);
 		avatars.recheck();

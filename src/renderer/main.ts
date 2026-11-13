@@ -231,6 +231,7 @@ declare const api: {
 	reveal(): P<string>;
 	settings(): P<Settings>;
 	setSettings(patch: Partial<Settings>): P<Settings>;
+	setAppIcon(dataUrl: string): P<void>;
 	onChanged(cb: () => void): void;
 	onNotice(cb: (n: { message: string; error: boolean }) => void): void;
 };
@@ -287,6 +288,26 @@ const icon = (name: string): HTMLElement =>
 
 /** The app logo (same drawing as build/icon.svg). Gradient ids are unique per instance. */
 let logoCount = 0;
+let iconAccent: string | undefined;
+/** The window and taskbar icon follow the accent colour: the in-app logo drawn as a PNG with the colours written in. Empty = the built-in icon. */
+async function syncAppIcon(accent: string): Promise<void> {
+	if (accent === iconAccent) return;
+	iconAccent = accent;
+	if (!accent) return void api.setAppIcon('');
+	const rgb = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16));
+	const mix = (to: number, t: number): string => '#' + rgb.map((c) => Math.round(c + (to - c) * t).toString(16).padStart(2, '0')).join('');
+	const ink = (0.299 * rgb[0]! + 0.587 * rgb[1]! + 0.114 * rgb[2]!) / 255 > 0.58 ? '#0b0b0c' : '#ffffff';
+	const css = `.lg-b0{stop-color:#1e1e21}.lg-b1{stop-color:#0b0b0c}.lg-s0{stop-color:${mix(255, 0.22)}}.lg-s1{stop-color:${mix(0, 0.18)}}.lg-ink{stroke:${ink}}.lg-shd{stroke:transparent}`;
+	const svg = logo(256).innerHTML.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace('<defs>', `<style>${css}</style><defs>`);
+	const img = new Image();
+	img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+	try { await img.decode(); } catch { return; }
+	const c = document.createElement('canvas');
+	c.width = c.height = 256;
+	c.getContext('2d')?.drawImage(img, 0, 0, 256, 256);
+	if (iconAccent === accent) void api.setAppIcon(c.toDataURL('image/png'));
+}
+
 const logo = (size: number, bare = false): HTMLElement => {
 	const g = `lg${++logoCount}`;
 	return el('span', { class: 'logo', innerHTML: `<svg viewBox="${bare ? '100 70 312 372' : '0 0 512 512'}" width="${bare ? Math.round((size * 312) / 372) : size}" height="${size}" aria-hidden="true"><defs><linearGradient id="${g}b" x1=".1" y1="0" x2=".9" y2="1"><stop class="lg-b0" offset="0"/><stop class="lg-b1" offset="1"/></linearGradient><linearGradient id="${g}s" x1="0" y1="0" x2=".35" y2="1"><stop class="lg-s0" offset="0"/><stop class="lg-s1" offset="1"/></linearGradient></defs>${bare ? '' : `<rect class="lg-tile" x="24" y="24" width="464" height="464" rx="118" fill="url(#${g}b)"/><rect class="lg-rim" x="25.5" y="25.5" width="461" height="461" rx="116.5" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="3"/>`}<path d="M256 76 404 128v124c0 90-62 142-148 180C170 394 108 342 108 252V128z" fill="url(#${g}s)" class="lg-shield"/><path class="lg-hi" d="M256 76 404 128v52C340 150 300 140 256 140s-84 10-148 40v-52z" fill="#fff" fill-opacity=".14"/><defs><g id="${g}t" fill="none" stroke-width="21" stroke-linecap="round" stroke-linejoin="round" transform="translate(256 240) scale(.74) translate(-257 -241)"><path d="M204 220C198 206 184 200 172 200C154 200 144 210 144 222C144 250 204 236 204 262C204 274 192 282 174 282C160 282 148 276 142 264"/><path d="M222 282L256 200L290 282M234 256H278"/><path d="M310 282V200L341 248L372 200V282"/></g></defs><use class="lg-shd" href="#${g}t" y="7"/><use class="lg-ink" href="#${g}t"/></svg>` });
@@ -455,6 +476,7 @@ function applySettings(s: Settings): void {
 		root.removeProperty('--accent');
 		root.removeProperty('--on-accent');
 	}
+	void syncAppIcon(s.accent);
 	document.body.classList.toggle('wide', s.layout !== 'list');
 	document.querySelector('.shell')?.classList.toggle('collapsed', s.sidebarCollapsed);
 	const t = document.querySelector<HTMLElement>('.mini.collapse');
